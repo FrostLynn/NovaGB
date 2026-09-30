@@ -7,9 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Tag version (e.g. v1.0.0)"
+        description: "Tag version"
         required: true
         default: "v1.0.0"
+
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -32,22 +35,30 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace || ./gradlew assembleDebug --stacktrace
+      - name: Build APK
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Locate APK
         id: find_apk
         run: |
-          APK_PATH=$(find app/build/outputs/apk/ -name "*.apk" | head -n 1)
-          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-          echo "Found APK at $APK_PATH"
+          APK_FILE=$(find app/build/outputs/apk/ -type f -name "*.apk" | head -n 1)
+          echo "apk_path=$APK_FILE" >> $GITHUB_OUTPUT
+          echo "Found APK at $APK_FILE"
+
+      - name: Determine Tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.tag_name }}" ]; then
+            echo "val=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "val=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, "refs/tags/") || github.event_name == "workflow_dispatch"
         with:
-          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
-          name: NovaGB ${{ github.event.inputs.tag_name || github.ref_name }}
+          tag_name: ${{ steps.tag.outputs.val }}
+          name: NovaGB ${{ steps.tag.outputs.val }}
           generate_release_notes: true
           files: ${{ steps.find_apk.outputs.apk_path }}
         env:
@@ -58,5 +69,5 @@ jobs:
         run: |
           STATUS="${{ job.status }}"
           curl -H "Title: NovaGB Release Status: $STATUS" \
-               -d "Alur kerja release ${{ github.ref_name }} selesai dengan status $STATUS." \
+               -d "Alur kerja release selesai dengan status $STATUS." \
                https://ntfy.sh/home_cdx_gb || true
