@@ -1,0 +1,33 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#1E1F24"
+        android:pathData="M0,0h108v108h-108z" />
+    <!-- GameBoy console body outline -->
+    <path
+        android:fillColor="#2D2F36"
+        android:pathData="M24,18 h60 a10,10 0 0 1 10,10 v52 a10,10 0 0 1 -10,10 h-60 a10,10 0 0 1 -10,-10 v-52 a10,10 0 0 1 10,-10 z" />
+    <!-- Screen bezel -->
+    <path
+        android:fillColor="#18191D"
+        android:pathData="M28,24 h52 a4,4 0 0 1 4,4 v32 a4,4 0 0 1 -4,4 h-52 a4,4 0 0 1 -4,-4 v-32 a4,4 0 0 1 4,-4 z" />
+    <!-- Screen LCD -->
+    <path
+        android:fillColor="#8BAC0F"
+        android:pathData="M34,28 h40 a2,2 0 0 1 2,2 v24 a2,2 0 0 1 -2,2 h-40 a2,2 0 0 1 -2,-2 v-24 a2,2 0 0 1 2,-2 z" />
+    <!-- D-Pad -->
+    <path
+        android:fillColor="#3E424B"
+        android:pathData="M30,70 h6 v-6 h4 v6 h6 v4 h-6 v6 h-4 v-6 h-6 z" />
+    <!-- B button -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M66,75 a4,4 0 1 0 8,0 a4,4 0 1 0 -8,0" />
+    <!-- A button -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M78,69 a4,4 0 1 0 8,0 a4,4 0 1 0 -8,0" />
+</vector>
