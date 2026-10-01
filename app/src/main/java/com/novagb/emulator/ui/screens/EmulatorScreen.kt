@@ -25,6 +25,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -68,7 +69,7 @@ fun EmulatorScreen(
     var fpsDisplay by remember { mutableIntStateOf(60) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val frameState = remember { mutableStateOf(gameBoy.ppu.framebuffer) }
+    val frameVersion = remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(game) {
         withContext(Dispatchers.IO) {
@@ -118,7 +119,7 @@ fun EmulatorScreen(
                 val startTime = System.currentTimeMillis()
 
                 gameBoy.stepFrame()
-                frameState.value = gameBoy.ppu.framebuffer
+                frameVersion.longValue++
 
                 frameCount++
                 val now = System.currentTimeMillis()
@@ -184,11 +185,12 @@ fun EmulatorScreen(
             }
 
             RetroDisplay(
-                framebuffer = frameState.value,
+                framebuffer = gameBoy.ppu.framebuffer,
                 aspectRatioMode = settings.aspectRatio,
                 showLcdGrid = settings.showLcdGrid,
                 showScanlines = settings.showScanlines,
-                modifier = Modifier.weight(1f, fill = false)
+                modifier = Modifier.weight(1f, fill = false),
+                frameIndexProvider = { frameVersion.longValue }
             )
 
             TouchController(

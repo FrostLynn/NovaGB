@@ -33,15 +33,15 @@ fun RetroDisplay(
     aspectRatioMode: AspectRatioMode,
     showLcdGrid: Boolean,
     showScanlines: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    frameIndexProvider: () -> Long = { 0L }
 ) {
     val bitmap = remember {
         Bitmap.createBitmap(160, 144, Bitmap.Config.ARGB_8888)
     }
-
-    // Update bitmap pixel data
-    bitmap.setPixels(framebuffer, 0, 160, 0, 0, 160, 144)
-    val imageBitmap = bitmap.asImageBitmap()
+    val imageBitmap = remember(bitmap) {
+        bitmap.asImageBitmap()
+    }
 
     val screenAspect = when (aspectRatioMode) {
         AspectRatioMode.ORIGINAL -> 160f / 144f
@@ -66,6 +66,14 @@ fun RetroDisplay(
                 .clip(RoundedCornerShape(8.dp))
                 .background(Color.Black)
         ) {
+            // Read frame state inside Canvas draw scope so Compose re-triggers
+            // only the draw phase every frame, bypassing recomposition and layout passes.
+            @Suppress("UNUSED_VARIABLE")
+            val currentFrame = frameIndexProvider()
+
+            // Update bitmap pixel data with latest framebuffer
+            bitmap.setPixels(framebuffer, 0, 160, 0, 0, 160, 144)
+
             val canvasW = size.width
             val canvasH = size.height
 

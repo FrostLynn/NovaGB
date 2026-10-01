@@ -43,6 +43,7 @@ class GameBoy {
         ppu.reset()
         apu.reset()
         timer.reset()
+        joypad.reset()
     }
 
     fun setButton(button: JoypadButton, pressed: Boolean) {
