@@ -3,6 +3,8 @@ package com.novagb.emulator.data
 import android.content.Context
 import android.net.Uri
 import com.novagb.emulator.core.Cartridge
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.util.UUID
 
@@ -12,13 +14,10 @@ class RomRepository(private val context: Context) {
     private val stateDir = File(context.filesDir, "states").apply { if (!exists()) mkdirs() }
     private val metaFile = File(context.filesDir, "rom_library.json")
 
-    fun getSampleRomBytes(): ByteArray {
-        return context.assets.open("games/sample.gb").use { it.readBytes() }
-    }
-
-    fun readRomBytes(uriString: String, isAsset: Boolean): ByteArray {
+    fun readRomBytes(uriString: String, isAsset: Boolean = false): ByteArray {
         return if (isAsset) {
-            getSampleRomBytes()
+            val assetPath = uriString.removePrefix("asset://")
+            context.assets.open(assetPath).use { it.readBytes() }
         } else {
             val uri = Uri.parse(uriString)
             context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -49,6 +48,59 @@ class RomRepository(private val context: Context) {
             totalPlayTimeSeconds = 0,
             bannerColorSeed = cart.header.title.hashCode()
         )
+    }
+
+    fun loadRomLibrary(): List<RomMetadata> {
+        if (!metaFile.exists()) return emptyList()
+        return try {
+            val jsonStr = metaFile.readText()
+            val array = JSONArray(jsonStr)
+            val list = mutableListOf<RomMetadata>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(
+                    RomMetadata(
+                        id = obj.optString("id", UUID.randomUUID().toString()),
+                        title = obj.optString("title", "Unknown"),
+                        uriString = obj.optString("uriString", ""),
+                        isAsset = obj.optBoolean("isAsset", false),
+                        isCgb = obj.optBoolean("isCgb", false),
+                        cartridgeType = obj.optString("cartridgeType", "MBC1"),
+                        romSizeBytes = obj.optLong("romSizeBytes", 0L),
+                        lastPlayedTimestamp = obj.optLong("lastPlayedTimestamp", 0L),
+                        totalPlayTimeSeconds = obj.optLong("totalPlayTimeSeconds", 0L),
+                        bannerColorSeed = obj.optInt("bannerColorSeed", 0)
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun saveRomLibrary(list: List<RomMetadata>) {
+        try {
+            val array = JSONArray()
+            for (rom in list) {
+                val obj = JSONObject().apply {
+                    put("id", rom.id)
+                    put("title", rom.title)
+                    put("uriString", rom.uriString)
+                    put("isAsset", rom.isAsset)
+                    put("isCgb", rom.isCgb)
+                    put("cartridgeType", rom.cartridgeType)
+                    put("romSizeBytes", rom.romSizeBytes)
+                    put("lastPlayedTimestamp", rom.lastPlayedTimestamp)
+                    put("totalPlayTimeSeconds", rom.totalPlayTimeSeconds)
+                    put("bannerColorSeed", rom.bannerColorSeed)
+                }
+                array.put(obj)
+            }
+            metaFile.writeText(array.toString(2))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun saveBatteryRam(romTitle: String, data: ByteArray) {

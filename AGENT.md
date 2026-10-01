@@ -21,7 +21,6 @@ D:\Projects\GB\
 ├── app/
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── assets/games/sample.gb        # Preloaded homebrew Game Boy ROM
 │   │   │   ├── cpp/                          # CMakeLists.txt & native JNI bridge
 │   │   │   ├── java/com/novagb/emulator/
 │   │   │   │   ├── audio/                    # AudioTrack PCM streaming buffer

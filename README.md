@@ -18,7 +18,7 @@ NovaGB adalah emulator Game Boy (DMG) dan Game Boy Color (CGB) modern berkinerja
   - Desain OLED Dark Theme dengan aksen Electric Cyan dan Neon Magenta.
   - Edge-to-edge layout dengan status bar dan navigation bar adaptif.
   - ROM Library Dashboard dengan Card metadata, pencarian cepat, waktu bermain, dan FAB impor berkas menggunakan Storage Access Framework (SAF).
-  - Built-in ROM Demo interaktif (`sample.gb`) di folder assets untuk langsung dimainkan tanpa perlu mengunduh ROM terpisah.
+  - Manajemen koleksi ROM lokal persisten yang tersimpan otomatis di perangkat.
 
 - **Display & Retro Shaders**:
   - Mode Aspek Rasio: Original 10:9, Integer Scale 3x, Fit Screen, dan Stretch Full.
@@ -50,7 +50,6 @@ D:\Projects\GB\
 ├── app/
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── assets/games/sample.gb       # Bundled demo Game Boy ROM
 │   │   │   ├── cpp/                         # CMake & C++ JNI bridge (Gambatte/SameBoy)
 │   │   │   ├── java/com/novagb/emulator/
 │   │   │   │   ├── audio/                   # GbAudioPlayer (AudioTrack streaming)

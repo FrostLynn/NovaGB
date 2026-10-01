@@ -39,8 +39,17 @@ class MainActivity : ComponentActivity() {
         if (intent?.action == Intent.ACTION_VIEW && intent.data != null) {
             val uri = intent.data!!
             try {
+                val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                contentResolver.takePersistableUriPermission(uri, takeFlags)
+            } catch (_: Exception) {}
+            try {
                 val bytes = repository.readRomBytes(uri.toString(), false)
-                initialRom = repository.parseRomMetadata(uri, bytes)
+                val meta = repository.parseRomMetadata(uri, bytes)
+                val currentLibrary = repository.loadRomLibrary().toMutableList()
+                currentLibrary.removeAll { it.uriString == meta.uriString || it.title == meta.title }
+                currentLibrary.add(0, meta)
+                repository.saveRomLibrary(currentLibrary)
+                initialRom = meta
             } catch (e: Exception) {
                 e.printStackTrace()
             }

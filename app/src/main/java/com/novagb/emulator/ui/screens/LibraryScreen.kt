@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
@@ -70,20 +71,22 @@ fun LibraryScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val romList = remember {
-        mutableStateListOf(
-            RomMetadata(
-                id = "sample_demo",
-                title = "NovaGB Interactive Demo",
-                uriString = "asset://sample.gb",
-                isAsset = true,
-                isCgb = false,
-                cartridgeType = "ROM ONLY",
-                romSizeBytes = 32768,
-                lastPlayedTimestamp = System.currentTimeMillis(),
-                totalPlayTimeSeconds = 120,
-                bannerColorSeed = 1
-            )
-        )
+        mutableStateListOf<RomMetadata>().apply {
+            addAll(repository.loadRomLibrary())
+        }
+    }
+
+    val handleLaunchGame: (RomMetadata) -> Unit = { game ->
+        val updatedGame = game.copy(lastPlayedTimestamp = System.currentTimeMillis())
+        romList.removeAll { it.id == game.id || it.uriString == game.uriString }
+        romList.add(0, updatedGame)
+        repository.saveRomLibrary(romList.toList())
+        onLaunchGame(updatedGame)
+    }
+
+    val handleDeleteGame: (RomMetadata) -> Unit = { game ->
+        romList.removeAll { it.id == game.id }
+        repository.saveRomLibrary(romList.toList())
     }
 
     val romPickerLauncher = rememberLauncherForActivityResult(
@@ -97,8 +100,10 @@ fun LibraryScreen(
             try {
                 val bytes = repository.readRomBytes(uri.toString(), false)
                 val meta = repository.parseRomMetadata(uri, bytes)
+                romList.removeAll { it.uriString == meta.uriString || it.title == meta.title }
                 romList.add(0, meta)
-                onLaunchGame(meta)
+                repository.saveRomLibrary(romList.toList())
+                handleLaunchGame(meta)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -166,47 +171,126 @@ fun LibraryScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                romList.firstOrNull()?.let { lastGame ->
-                    HeroResumeCard(
-                        game = lastGame,
-                        onPlayClick = { onLaunchGame(lastGame) }
+            if (romList.isEmpty()) {
+                item {
+                    EmptyLibraryCard(onImportClick = { romPickerLauncher.launch(arrayOf("*/*")) })
+                }
+            } else {
+                item {
+                    romList.firstOrNull()?.let { lastGame ->
+                        HeroResumeCard(
+                            game = lastGame,
+                            onPlayClick = { handleLaunchGame(lastGame) }
+                        )
+                    }
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search your ROM collection...", color = Color(0xFF6B7280)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF181A20)),
+                        singleLine = true
+                    )
+                }
+
+                item {
+                    Text(
+                        text = "GAMES LIBRARY (${romList.size})",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF8E95A5),
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                val filteredList = romList.filter {
+                    it.title.contains(searchQuery, ignoreCase = true)
+                }
+
+                items(filteredList, key = { it.id }) { game ->
+                    GameCardItem(
+                        game = game,
+                        onClick = { handleLaunchGame(game) },
+                        onDelete = { handleDeleteGame(game) }
                     )
                 }
             }
+        }
+    }
+}
 
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search your ROM collection...", color = Color(0xFF6B7280)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF181A20)),
-                    singleLine = true
+@Composable
+private fun EmptyLibraryCard(onImportClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF181A22))
+            .border(1.dp, Color(0xFF262A36), RoundedCornerShape(16.dp))
+            .padding(vertical = 36.dp, horizontal = 20.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF20232C)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SportsEsports,
+                    contentDescription = null,
+                    tint = Color(0xFF00E5FF),
+                    modifier = Modifier.size(28.dp)
                 )
             }
-
-            item {
-                Text(
-                    text = "GAMES LIBRARY (${romList.size})",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF8E95A5),
-                    letterSpacing = 1.sp
-                )
-            }
-
-            val filteredList = romList.filter {
-                it.title.contains(searchQuery, ignoreCase = true)
-            }
-
-            items(filteredList, key = { it.id }) { game ->
-                GameCardItem(
-                    game = game,
-                    onClick = { onLaunchGame(game) }
-                )
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = "No Games in Library",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Tap below or use the '+' button to load Game Boy (.gb / .gbc) ROMs from your device.",
+                fontSize = 13.sp,
+                color = Color(0xFF8E95A5),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFF00E5FF),
+                modifier = Modifier.clickable { onImportClick() }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Color.Black,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "ADD ROM",
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
             }
         }
     }
@@ -267,7 +351,7 @@ private fun HeroResumeCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Built-in Sample ROM",
+                    text = "${maxOf(1L, game.romSizeBytes / 1024)} KB • ${if (game.isCgb) "Game Boy Color" else "Game Boy"}",
                     fontSize = 12.sp,
                     color = Color(0xFF8E95A5)
                 )
@@ -304,10 +388,13 @@ private fun HeroResumeCard(
 @Composable
 private fun GameCardItem(
     game: RomMetadata,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val dateStr = remember(game.lastPlayedTimestamp) {
-        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(game.lastPlayedTimestamp))
+        if (game.lastPlayedTimestamp > 0) {
+            SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(game.lastPlayedTimestamp))
+        } else "Never played"
     }
 
     Box(
@@ -352,7 +439,7 @@ private fun GameCardItem(
                 Spacer(modifier = Modifier.height(4.dp))
                 Row {
                     Text(
-                        text = "${game.romSizeBytes / 1024} KB",
+                        text = "${maxOf(1L, game.romSizeBytes / 1024)} KB",
                         fontSize = 12.sp,
                         color = Color(0xFF8E95A5)
                     )
@@ -369,12 +456,17 @@ private fun GameCardItem(
                 }
             }
 
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = "Play",
-                tint = Color(0xFF8E95A5),
-                modifier = Modifier.size(24.dp)
-            )
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Remove ROM",
+                    tint = Color(0xFF6B7280),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
