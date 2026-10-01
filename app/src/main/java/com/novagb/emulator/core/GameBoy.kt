@@ -63,6 +63,7 @@ class GameBoy {
             apu.step(stepCycles)
             frameCycles += stepCycles
         }
+        apu.flushAudio()
         return frameCycles
     }
 

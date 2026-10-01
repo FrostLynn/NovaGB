@@ -27,7 +27,8 @@ class GbAudioPlayer {
             AudioFormat.CHANNEL_OUT_STEREO,
             AudioFormat.ENCODING_PCM_16BIT
         )
-        val bufferSize = maxOf(minBufferSize, 4096)
+        // 4x minBufferSize or at least 16KB cushion (~90-120ms) to prevent audio underrun/clicks
+        val bufferSize = maxOf(minBufferSize * 4, 16384)
 
         try {
             audioTrack = AudioTrack.Builder()
@@ -59,7 +60,15 @@ class GbAudioPlayer {
     fun writeSamples(samples: ShortArray, size: Int) {
         if (!isRunning.get() || audioTrack == null) return
         try {
-            audioTrack?.write(samples, 0, size, AudioTrack.WRITE_NON_BLOCKING)
+            var offset = 0
+            while (offset < size && isRunning.get()) {
+                val written = audioTrack?.write(samples, offset, size - offset, AudioTrack.WRITE_NON_BLOCKING) ?: break
+                if (written > 0) {
+                    offset += written
+                } else {
+                    break
+                }
+            }
         } catch (e: Exception) {
             // Drop on buffer overflow
         }

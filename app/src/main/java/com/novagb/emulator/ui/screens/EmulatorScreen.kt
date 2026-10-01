@@ -121,26 +121,44 @@ fun EmulatorScreen(
         withContext(Dispatchers.Default) {
             var frameCount = 0
             var lastFpsCheck = System.currentTimeMillis()
-            val targetFrameTimeMs = if (isFastForward) (16.666 / settings.fastForwardSpeed).toLong() else 16L
+            val baseFrameNs = 16_742_706L // 1,000,000,000 / 59.7275 FPS
+            val targetFrameTimeNs = if (isFastForward) {
+                (baseFrameNs / settings.fastForwardSpeed).coerceAtLeast(1_000_000L)
+            } else {
+                baseFrameNs
+            }
+            var nextFrameTimeNs = System.nanoTime()
 
             while (isActive) {
-                val startTime = System.currentTimeMillis()
-
                 gameBoy.stepFrame()
                 frameVersion.longValue++
 
                 frameCount++
-                val now = System.currentTimeMillis()
-                if (now - lastFpsCheck >= 1000) {
-                    fpsDisplay = (frameCount * 1000 / (now - lastFpsCheck)).toInt()
+                val nowMs = System.currentTimeMillis()
+                if (nowMs - lastFpsCheck >= 1000) {
+                    fpsDisplay = (frameCount * 1000 / (nowMs - lastFpsCheck)).toInt()
                     frameCount = 0
-                    lastFpsCheck = now
+                    lastFpsCheck = nowMs
                 }
 
-                val elapsed = System.currentTimeMillis() - startTime
-                val sleepTime = targetFrameTimeMs - elapsed
-                if (sleepTime > 0) {
-                    delay(sleepTime)
+                nextFrameTimeNs += targetFrameTimeNs
+                val nowNs = System.nanoTime()
+                val diffNs = nextFrameTimeNs - nowNs
+
+                if (diffNs > 2_500_000L) {
+                    // Sleep coarse milliseconds, leaving headroom for fine-tuned precision yield
+                    val sleepMs = (diffNs / 1_000_000L) - 1
+                    delay(sleepMs)
+                    while (System.nanoTime() < nextFrameTimeNs && isActive) {
+                        Thread.yield()
+                    }
+                } else if (diffNs > 0) {
+                    while (System.nanoTime() < nextFrameTimeNs && isActive) {
+                        Thread.yield()
+                    }
+                } else if (diffNs < -50_000_000L) {
+                    // Reset timing anchor if fallen more than 3 frames behind (e.g. app paused)
+                    nextFrameTimeNs = System.nanoTime()
                 }
             }
         }

@@ -8,8 +8,8 @@ class Apu {
 
     var enabled: Boolean = true
 
-    // Audio sample buffer for streaming to AudioTrack
-    private val sampleBuffer = ShortArray(4096)
+    // Audio sample buffer for streaming to AudioTrack (~1 frame worth at 44.1kHz stereo)
+    private val sampleBuffer = ShortArray(1470)
     private var sampleBufferIndex = 0
     var onAudioBufferFull: ((ShortArray, Int) -> Unit)? = null
 
@@ -302,23 +302,26 @@ class Apu {
 
     private fun clockTimers(cycles: Int) {
         // Ch1
+        val ch1Period = maxOf(4, (2048 - ch1Freq) * 4)
         ch1Timer -= cycles
         while (ch1Timer <= 0) {
-            ch1Timer += (2048 - ch1Freq) * 4
+            ch1Timer += ch1Period
             ch1WaveIndex = (ch1WaveIndex + 1) and 0x07
         }
 
         // Ch2
+        val ch2Period = maxOf(4, (2048 - ch2Freq) * 4)
         ch2Timer -= cycles
         while (ch2Timer <= 0) {
-            ch2Timer += (2048 - ch2Freq) * 4
+            ch2Timer += ch2Period
             ch2WaveIndex = (ch2WaveIndex + 1) and 0x07
         }
 
         // Ch3
+        val ch3Period = maxOf(2, (2048 - ch3Freq) * 2)
         ch3Timer -= cycles
         while (ch3Timer <= 0) {
-            ch3Timer += (2048 - ch3Freq) * 2
+            ch3Timer += ch3Period
             ch3SampleIndex = (ch3SampleIndex + 1) and 0x1F
         }
 
@@ -473,6 +476,16 @@ class Apu {
         }
 
         if (sampleBufferIndex >= sampleBuffer.size) {
+            onAudioBufferFull?.invoke(sampleBuffer, sampleBufferIndex)
+            sampleBufferIndex = 0
+        }
+    }
+
+    /**
+     * Flushes any remaining audio samples to the audio output callback at frame boundaries.
+     */
+    fun flushAudio() {
+        if (sampleBufferIndex > 0) {
             onAudioBufferFull?.invoke(sampleBuffer, sampleBufferIndex)
             sampleBufferIndex = 0
         }
