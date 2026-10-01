@@ -54,6 +54,7 @@ class GameBoy {
      * Executes enough CPU/PPU cycles to complete one full frame (~70,224 cycles).
      */
     fun stepFrame(): Int {
+        if (cartridge == null) return cyclesPerFrame
         var frameCycles = 0
         while (frameCycles < cyclesPerFrame) {
             val stepCycles = cpu.step()

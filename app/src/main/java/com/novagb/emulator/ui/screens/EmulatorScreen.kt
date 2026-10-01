@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -70,6 +72,8 @@ fun EmulatorScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val frameVersion = remember { mutableLongStateOf(0L) }
+    var isRomLoaded by remember { mutableStateOf(false) }
+    var romLoadError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(game) {
         withContext(Dispatchers.IO) {
@@ -89,8 +93,10 @@ fun EmulatorScreen(
                         audioPlayer.writeSamples(buffer, size)
                     }
                 }
+                isRomLoaded = true
             } catch (e: Exception) {
                 e.printStackTrace()
+                romLoadError = e.message ?: "Failed to load ROM"
             }
         }
     }
@@ -109,7 +115,9 @@ fun EmulatorScreen(
         }
     }
 
-    LaunchedEffect(isFastForward) {
+    LaunchedEffect(isRomLoaded, isFastForward) {
+        if (!isRomLoaded) return@LaunchedEffect
+
         withContext(Dispatchers.Default) {
             var frameCount = 0
             var lastFpsCheck = System.currentTimeMillis()
@@ -144,7 +152,10 @@ fun EmulatorScreen(
             .background(Color(0xFF0C0D10))
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding(),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
