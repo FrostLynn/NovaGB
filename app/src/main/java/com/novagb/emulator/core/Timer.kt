@@ -11,6 +11,10 @@ class Timer(private val mmu: Mmu) {
     var tma: Int = 0
     var tac: Int = 0
 
+    // Overflow reload state machine (4 T-cycles delay on overflow)
+    private var overflowDelay: Int = 0
+    private var timaReloadPending: Boolean = false
+
     val div: Int
         get() = (internalDivider ushr 8) and 0xFF
 
@@ -19,6 +23,8 @@ class Timer(private val mmu: Mmu) {
         tima = 0
         tma = 0
         tac = 0
+        overflowDelay = 0
+        timaReloadPending = false
     }
 
     fun read(addr: Int): Int {
@@ -34,38 +40,78 @@ class Timer(private val mmu: Mmu) {
     fun write(addr: Int, value: Int) {
         val v = value and 0xFF
         when (addr) {
-            0xFF04 -> internalDivider = 0 // Any write resets DIV
-            0xFF05 -> tima = v
-            0xFF06 -> tma = v
-            0xFF07 -> tac = v and 0x07
+            0xFF04 -> {
+                val prevBit = timerBit()
+                internalDivider = 0
+                val newBit = timerBit()
+                if (prevBit && !newBit) {
+                    incrementTima()
+                }
+            }
+            0xFF05 -> {
+                // If software writes to TIMA during the 4-cycle overflow delay, cancel reload
+                if (timaReloadPending && overflowDelay > 0) {
+                    timaReloadPending = false
+                    overflowDelay = 0
+                }
+                tima = v
+            }
+            0xFF06 -> {
+                tma = v
+                if (timaReloadPending && overflowDelay == 0) {
+                    tima = v
+                }
+            }
+            0xFF07 -> {
+                val prevBit = timerBit()
+                tac = v and 0x07
+                val newBit = timerBit()
+                if (prevBit && !newBit) {
+                    incrementTima()
+                }
+            }
         }
     }
 
     fun step(cycles: Int) {
-        val prevDivider = internalDivider
-        internalDivider = (internalDivider + cycles) and 0xFFFF
-
-        val enabled = (tac and 0x04) != 0
-        if (!enabled) return
-
-        val rateMask = when (tac and 0x03) {
-            0 -> 1024 // 4096 Hz (bit 9)
-            1 -> 16   // 262144 Hz (bit 3)
-            2 -> 64   // 65536 Hz (bit 5)
-            3 -> 256  // 16384 Hz (bit 7)
-            else -> 1024
-        }
-
-        // Detect falling edge of the selected bit
-        val prevBit = (prevDivider and (rateMask ushr 1)) != 0
-        val currentBit = (internalDivider and (rateMask ushr 1)) != 0
-
-        if (prevBit && !currentBit) {
-            tima++
-            if (tima > 0xFF) {
-                tima = tma
-                mmu.requestInterrupt(InterruptType.TIMER)
+        for (i in 0 until cycles) {
+            if (timaReloadPending) {
+                overflowDelay--
+                if (overflowDelay == 0) {
+                    tima = tma
+                    mmu.requestInterrupt(InterruptType.TIMER)
+                    timaReloadPending = false
+                }
             }
+
+            val prevBit = timerBit()
+            internalDivider = (internalDivider + 1) and 0xFFFF
+            val newBit = timerBit()
+
+            if (prevBit && !newBit) {
+                incrementTima()
+            }
+        }
+    }
+
+    private fun timerBit(): Boolean {
+        if ((tac and 0x04) == 0) return false
+        val bitIndex = when (tac and 0x03) {
+            0 -> 9  // 4096 Hz (every 1024 cycles)
+            1 -> 3  // 262144 Hz (every 16 cycles)
+            2 -> 5  // 65536 Hz (every 64 cycles)
+            3 -> 7  // 16384 Hz (every 256 cycles)
+            else -> 9
+        }
+        return ((internalDivider ushr bitIndex) and 1) != 0
+    }
+
+    private fun incrementTima() {
+        tima = (tima + 1) and 0xFF
+        if (tima == 0) {
+            // TIMA overflow: enters 4 T-cycles delay window
+            timaReloadPending = true
+            overflowDelay = 4
         }
     }
 }
