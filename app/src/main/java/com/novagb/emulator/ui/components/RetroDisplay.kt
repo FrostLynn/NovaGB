@@ -282,23 +282,6 @@ fun RetroDisplay(
                         .padding(horizontal = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(3.dp),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (classicDmgShell) Color(0xFF102055) else Color(0xFF8E95A5).copy(alpha = 0.6f)
-                        ),
-                        color = Color.Transparent
-                    ) {
-                        Text(
-                            text = "Nintendo",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (classicDmgShell) Color(0xFF102055) else Color(0xFFD0D5E0),
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "GAME BOY",
                         fontSize = 14.sp,
