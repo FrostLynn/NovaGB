@@ -7,14 +7,14 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,15 +41,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novagb.emulator.core.JoypadButton
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
 /**
- * Modern semi-transparent frosted glass touch controller with tactile haptic feedback.
+ * Modern semi-transparent frosted glass touch controller with tactile haptic feedback,
+ * 8-direction D-pad (diagonal input), holdable Start/Select, and Turbo buttons.
  */
 @Composable
 fun TouchController(
@@ -81,7 +84,7 @@ fun TouchController(
                     @Suppress("DEPRECATION")
                     vibrator.vibrate(25)
                 }
-            } catch (e: Exception) {}
+            } catch (_: Exception) {}
         }
     }
 
@@ -121,7 +124,7 @@ fun TouchController(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
-            // Modern Circular D-Pad
+            // Modern Circular 8-Direction D-Pad with zero touch-slop latency
             ModernDPad(
                 onButtonChange = { btn, pressed ->
                     if (pressed) triggerHaptic()
@@ -138,7 +141,7 @@ fun TouchController(
             )
         }
 
-        // Bottom Center: SELECT & START
+        // Bottom Center: SELECT & START (now support holding)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -148,19 +151,17 @@ fun TouchController(
         ) {
             PillButton(
                 text = "SELECT",
-                onClick = {
-                    triggerHaptic()
-                    onButtonChange(JoypadButton.SELECT, true)
-                    onButtonChange(JoypadButton.SELECT, false)
+                onPressChange = { pressed ->
+                    if (pressed) triggerHaptic()
+                    onButtonChange(JoypadButton.SELECT, pressed)
                 }
             )
             Spacer(modifier = Modifier.width(32.dp))
             PillButton(
                 text = "START",
-                onClick = {
-                    triggerHaptic()
-                    onButtonChange(JoypadButton.START, true)
-                    onButtonChange(JoypadButton.START, false)
+                onPressChange = { pressed ->
+                    if (pressed) triggerHaptic()
+                    onButtonChange(JoypadButton.START, pressed)
                 }
             )
         }
@@ -171,7 +172,7 @@ fun TouchController(
 private fun ModernDPad(
     onButtonChange: (JoypadButton, Boolean) -> Unit
 ) {
-    var activeDirection by remember { mutableStateOf<JoypadButton?>(null) }
+    var activeDirections by remember { mutableStateOf<Set<JoypadButton>>(emptySet()) }
 
     Box(
         modifier = Modifier
@@ -185,66 +186,71 @@ private fun ModernDPad(
             )
             .border(2.dp, Color(0xFF3B404E), CircleShape)
             .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        val dir = calculateDirection(offset.x, offset.y, size.width.toFloat(), size.height.toFloat())
-                        if (dir != activeDirection) {
-                            activeDirection?.let { onButtonChange(it, false) }
-                            dir?.let { onButtonChange(it, true) }
-                            activeDirection = dir
-                        }
-                    },
-                    onDragEnd = {
-                        activeDirection?.let { onButtonChange(it, false) }
-                        activeDirection = null
-                    },
-                    onDragCancel = {
-                        activeDirection?.let { onButtonChange(it, false) }
-                        activeDirection = null
-                    },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        val dir = calculateDirection(
-                            change.position.x,
-                            change.position.y,
-                            size.width.toFloat(),
-                            size.height.toFloat()
-                        )
-                        if (dir != activeDirection) {
-                            activeDirection?.let { onButtonChange(it, false) }
-                            dir?.let { onButtonChange(it, true) }
-                            activeDirection = dir
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+
+                    val updateDirections: (Float, Float) -> Unit = { px, py ->
+                        val newDirs = calculateDirections(px, py, size.width.toFloat(), size.height.toFloat())
+                        if (newDirs != activeDirections) {
+                            for (b in activeDirections - newDirs) {
+                                onButtonChange(b, false)
+                            }
+                            for (b in newDirs - activeDirections) {
+                                onButtonChange(b, true)
+                            }
+                            activeDirections = newDirs
                         }
                     }
-                )
+
+                    updateDirections(down.position.x, down.position.y)
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) {
+                            for (b in activeDirections) {
+                                onButtonChange(b, false)
+                            }
+                            activeDirections = emptySet()
+                            break
+                        }
+                        updateDirections(change.position.x, change.position.y)
+                        change.consume()
+                    }
+                }
             },
         contentAlignment = Alignment.Center
     ) {
+        val isUp = JoypadButton.UP in activeDirections
+        val isDown = JoypadButton.DOWN in activeDirections
+        val isLeft = JoypadButton.LEFT in activeDirections
+        val isRight = JoypadButton.RIGHT in activeDirections
+
         // Direction indicators
         Text(
             text = "▲",
-            color = if (activeDirection == JoypadButton.UP) Color(0xFF00E5FF) else Color(0xFF8E95A5),
+            color = if (isUp) Color(0xFF00E5FF) else Color(0xFF8E95A5),
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)
         )
         Text(
             text = "▼",
-            color = if (activeDirection == JoypadButton.DOWN) Color(0xFF00E5FF) else Color(0xFF8E95A5),
+            color = if (isDown) Color(0xFF00E5FF) else Color(0xFF8E95A5),
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp)
         )
         Text(
             text = "◀",
-            color = if (activeDirection == JoypadButton.LEFT) Color(0xFF00E5FF) else Color(0xFF8E95A5),
+            color = if (isLeft) Color(0xFF00E5FF) else Color(0xFF8E95A5),
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 10.dp)
         )
         Text(
             text = "▶",
-            color = if (activeDirection == JoypadButton.RIGHT) Color(0xFF00E5FF) else Color(0xFF8E95A5),
+            color = if (isRight) Color(0xFF00E5FF) else Color(0xFF8E95A5),
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 10.dp)
@@ -261,21 +267,29 @@ private fun ModernDPad(
     }
 }
 
-private fun calculateDirection(x: Float, y: Float, width: Float, height: Float): JoypadButton? {
+/**
+ * Calculates 8-direction JoypadButton combinations based on touch angle.
+ */
+private fun calculateDirections(x: Float, y: Float, width: Float, height: Float): Set<JoypadButton> {
     val centerX = width / 2f
     val centerY = height / 2f
     val dx = x - centerX
     val dy = y - centerY
     val dist = sqrt(dx * dx + dy * dy)
 
-    if (dist < 20f) return null // Deadzone
+    if (dist < 18f) return emptySet() // Deadzone
 
     val angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
+
     return when {
-        angle in -45f..45f -> JoypadButton.RIGHT
-        angle in 45f..135f -> JoypadButton.DOWN
-        angle in -135f..-45f -> JoypadButton.UP
-        else -> JoypadButton.LEFT
+        angle in -22.5f..22.5f -> setOf(JoypadButton.RIGHT)
+        angle in 22.5f..67.5f -> setOf(JoypadButton.DOWN, JoypadButton.RIGHT)
+        angle in 67.5f..112.5f -> setOf(JoypadButton.DOWN)
+        angle in 112.5f..157.5f -> setOf(JoypadButton.DOWN, JoypadButton.LEFT)
+        angle in -67.5f..-22.5f -> setOf(JoypadButton.UP, JoypadButton.RIGHT)
+        angle in -112.5f..-67.5f -> setOf(JoypadButton.UP)
+        angle in -157.5f..-112.5f -> setOf(JoypadButton.UP, JoypadButton.LEFT)
+        else -> setOf(JoypadButton.LEFT)
     }
 }
 
@@ -284,26 +298,48 @@ private fun ActionButtonsGroup(
     onButtonChange: (JoypadButton, Boolean) -> Unit
 ) {
     Box(
-        modifier = Modifier.size(160.dp),
+        modifier = Modifier.size(170.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Turbo B Button (Top-Left of B)
+        TurboActionButton(
+            label = "TB",
+            color = Color(0xFFFF2A6D),
+            button = JoypadButton.B,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = 18.dp, y = 16.dp),
+            onButtonPulse = onButtonChange
+        )
+
+        // Turbo A Button (Top-Right of A)
+        TurboActionButton(
+            label = "TA",
+            color = Color(0xFF00E5FF),
+            button = JoypadButton.A,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = (-16).dp, y = 4.dp),
+            onButtonPulse = onButtonChange
+        )
+
         // B Button (Bottom-Left)
         CircularActionButton(
             label = "B",
             color = Color(0xFFFF2A6D),
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .offset(y = 20.dp),
+                .align(Alignment.BottomStart)
+                .offset(x = 8.dp, y = (-12).dp),
             onPressChange = { onButtonChange(JoypadButton.B, it) }
         )
 
-        // A Button (Top-Right)
+        // A Button (Center-Right)
         CircularActionButton(
             label = "A",
             color = Color(0xFF00E5FF),
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .offset(y = (-20).dp),
+                .offset(x = (-6).dp, y = 14.dp),
             onPressChange = { onButtonChange(JoypadButton.A, it) }
         )
     }
@@ -320,8 +356,8 @@ private fun CircularActionButton(
 
     Box(
         modifier = modifier
-            .size(64.dp)
-            .shadow(if (isPressed) 4.dp else 10.dp, CircleShape)
+            .size(56.dp)
+            .shadow(if (isPressed) 3.dp else 8.dp, CircleShape)
             .clip(CircleShape)
             .background(
                 if (isPressed) color.copy(alpha = 0.9f)
@@ -349,7 +385,62 @@ private fun CircularActionButton(
             text = label,
             color = if (isPressed) Color.Black else color,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = 22.sp
+            fontSize = 20.sp
+        )
+    }
+}
+
+@Composable
+private fun TurboActionButton(
+    label: String,
+    color: Color,
+    button: JoypadButton,
+    modifier: Modifier = Modifier,
+    onButtonPulse: (JoypadButton, Boolean) -> Unit
+) {
+    var isHolding by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isHolding) {
+        if (!isHolding) return@LaunchedEffect
+        while (isActive) {
+            onButtonPulse(button, true)
+            delay(50) // 50ms ON
+            onButtonPulse(button, false)
+            delay(50) // 50ms OFF
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .size(42.dp)
+            .shadow(if (isHolding) 2.dp else 6.dp, CircleShape)
+            .clip(CircleShape)
+            .background(
+                if (isHolding) color.copy(alpha = 0.85f)
+                else Color(0xFF1E2129)
+            )
+            .border(
+                1.5.dp,
+                if (isHolding) color else color.copy(alpha = 0.5f),
+                CircleShape
+            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        isHolding = true
+                        tryAwaitRelease()
+                        isHolding = false
+                        onButtonPulse(button, false)
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = if (isHolding) Color.Black else color,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp
         )
     }
 }
@@ -358,21 +449,37 @@ private fun CircularActionButton(
 private fun PillButton(
     text: String,
     active: Boolean = false,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null,
+    onPressChange: ((Boolean) -> Unit)? = null
 ) {
+    var isPressed by remember { mutableStateOf(false) }
+    val isHighlighted = active || isPressed
+
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(if (active) Color(0xFF00E5FF) else Color(0xFF242731))
-            .border(1.dp, if (active) Color(0xFF00E5FF) else Color(0xFF3B404E), RoundedCornerShape(20.dp))
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { onClick() })
+            .background(if (isHighlighted) Color(0xFF00E5FF) else Color(0xFF242731))
+            .border(1.dp, if (isHighlighted) Color(0xFF00E5FF) else Color(0xFF3B404E), RoundedCornerShape(20.dp))
+            .pointerInput(onClick, onPressChange) {
+                if (onPressChange != null) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            onPressChange(true)
+                            tryAwaitRelease()
+                            isPressed = false
+                            onPressChange(false)
+                        }
+                    )
+                } else if (onClick != null) {
+                    detectTapGestures(onTap = { onClick() })
+                }
             }
             .padding(horizontal = 18.dp, vertical = 8.dp)
     ) {
         Text(
             text = text,
-            color = if (active) Color.Black else Color(0xFFD0D5E0),
+            color = if (isHighlighted) Color.Black else Color(0xFFD0D5E0),
             fontWeight = FontWeight.Bold,
             fontSize = 11.sp,
             letterSpacing = 1.sp
