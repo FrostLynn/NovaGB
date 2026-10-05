@@ -84,12 +84,14 @@ class Ppu(private val mmu: Mmu) {
                     // Disabling LCD
                     ly = 0
                     cycleCounter = 0
+                    windowLineCounter = 0
                     setMode(0)
                     prevStatLine = false
                     backBuffer.fill(paletteColors[0])
                 } else if (!wasEnabled && nowEnabled) {
                     cycleCounter = 0
                     ly = 0
+                    windowLineCounter = 0
                     setMode(2)
                     checkLyc()
                 }
@@ -239,13 +241,13 @@ class Ppu(private val mmu: Mmu) {
         val mapBase = if ((lcdc and 0x08) != 0) 0x1C00 else 0x1800 // 0x9C00 or 0x9800 relative to VRAM
         val signedTiles = (lcdc and 0x10) == 0
         val yPos = (scy + ly) and 0xFF
-        val tileRow = yPos / 8
+        val tileRow = (yPos / 8) and 31
 
         val fbRowOffset = ly * 160
 
         for (x in 0 until 160) {
             val xPos = (scx + x) and 0xFF
-            val tileCol = xPos / 8
+            val tileCol = (xPos / 8) and 31
             val tileMapIndex = mapBase + (tileRow * 32) + tileCol
             val tileId = mmu.vram[tileMapIndex].toInt() and 0xFF
 
@@ -277,7 +279,7 @@ class Ppu(private val mmu: Mmu) {
 
         val mapBase = if ((lcdc and 0x40) != 0) 0x1C00 else 0x1800
         val signedTiles = (lcdc and 0x10) == 0
-        val tileRow = windowLineCounter / 8
+        val tileRow = (windowLineCounter / 8) and 31
 
         val fbRowOffset = ly * 160
         var windowDrawn = false
@@ -285,7 +287,7 @@ class Ppu(private val mmu: Mmu) {
         for (x in maxOf(0, windowX) until 160) {
             windowDrawn = true
             val xPos = x - windowX
-            val tileCol = xPos / 8
+            val tileCol = (xPos / 8) and 31
             val tileMapIndex = mapBase + (tileRow * 32) + tileCol
             val tileId = mmu.vram[tileMapIndex].toInt() and 0xFF
 

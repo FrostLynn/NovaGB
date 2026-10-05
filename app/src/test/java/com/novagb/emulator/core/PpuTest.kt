@@ -148,4 +148,25 @@ class PpuTest {
             ppu.framebuffer[0]
         )
     }
+
+    @Test
+    fun testWindowLineCounterDoesNotOverflowVramBounds() {
+        // Reproduce issue: LCD disabled at line 145, then restarted, accumulating window lines
+        ppu.write(0xFF40, 0x00) // LCD off
+        ppu.write(0xFF4A, 0) // WY = 0
+        ppu.write(0xFF4B, 7) // WX = 7
+        // LCD on, Window on, BG on, Window map at 0x9C00 (mapBase = 0x1C00 = 7168)
+        // 0x40 (Window tile map 0x9C00) | 0x20 (Window on) | 0x10 | 0x01 | 0x80 = 0xF1
+        ppu.write(0xFF40, 0xF1)
+
+        // Run multiple frames where LCD is disabled during V-Blank before line 154
+        for (f in 0..4) {
+            // Step 145 scanlines
+            ppu.step(145 * 456)
+            // LCD disabled at line 145 (exact behavior of Pokémon Red DisableLCD)
+            ppu.write(0xFF40, 0x00)
+            // Re-enabled
+            ppu.write(0xFF40, 0xF1)
+        }
+    }
 }

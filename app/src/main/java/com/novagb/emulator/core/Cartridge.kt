@@ -70,11 +70,14 @@ class Mbc1(
 
     override fun readRom(addr: Int): Int {
         val bank = if (addr < 0x4000) {
-            if (bankingMode == 1) {
+            if (bankingMode == 1 && totalRomBanks > 0) {
                 (ramBankOrUpperRom shl 5) % totalRomBanks
             } else 0
         } else {
-            val fullBank = ((ramBankOrUpperRom shl 5) or romBank) % totalRomBanks
+            val fullBank = if (totalRomBanks > 0) {
+                val b = ((ramBankOrUpperRom shl 5) or romBank) % totalRomBanks
+                if (b == 0) 1 else b
+            } else 1
             fullBank
         }
         val romAddr = (bank * 0x4000) + (addr and 0x3FFF)
@@ -187,7 +190,10 @@ class Mbc3(
     private var latchState: Int = 0
 
     override fun readRom(addr: Int): Int {
-        val bank = if (addr < 0x4000) 0 else romBank % totalRomBanks
+        val bank = if (addr < 0x4000) 0 else {
+            val b = if (totalRomBanks > 0) romBank % totalRomBanks else 1
+            if (b == 0) 1 else b
+        }
         val romAddr = (bank * 0x4000) + (addr and 0x3FFF)
         return if (romAddr in rom.indices) rom[romAddr].toInt() and 0xFF else 0xFF
     }
@@ -220,7 +226,7 @@ class Mbc3(
 
     override fun readRam(addr: Int): Int {
         if (!ramEnabled) return 0xFF
-        if (ramBankOrRtc in 0x00..0x03 && ram.isNotEmpty()) {
+        if (ramBankOrRtc in 0x00..0x03 && ram.isNotEmpty() && totalRamBanks > 0) {
             val bank = ramBankOrRtc % totalRamBanks
             val offset = (bank * 0x2000) + (addr - 0xA000)
             return if (offset in ram.indices) ram[offset].toInt() and 0xFF else 0xFF
@@ -232,7 +238,7 @@ class Mbc3(
 
     override fun writeRam(addr: Int, value: Int) {
         if (!ramEnabled) return
-        if (ramBankOrRtc in 0x00..0x03 && ram.isNotEmpty()) {
+        if (ramBankOrRtc in 0x00..0x03 && ram.isNotEmpty() && totalRamBanks > 0) {
             val bank = ramBankOrRtc % totalRamBanks
             val offset = (bank * 0x2000) + (addr - 0xA000)
             if (offset in ram.indices) {
