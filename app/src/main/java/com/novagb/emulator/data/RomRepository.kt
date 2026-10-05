@@ -132,4 +132,10 @@ class RomRepository(private val context: Context) {
         val file = File(stateDir, "${safeName}_slot$slotIndex.state")
         return file.exists()
     }
+
+    fun getStateSlotLastModified(romTitle: String, slotIndex: Int): Long {
+        val safeName = romTitle.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+        val file = File(stateDir, "${safeName}_slot$slotIndex.state")
+        return if (file.exists()) file.lastModified() else 0L
+    }
 }

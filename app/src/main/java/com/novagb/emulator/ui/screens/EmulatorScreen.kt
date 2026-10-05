@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -52,6 +55,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -276,6 +282,7 @@ private fun QuickMenuSheetContent(
     onExit: () -> Unit
 ) {
     var saveStatusMsg by remember { mutableStateOf("") }
+    var stateUpdateTrigger by remember { mutableIntStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -305,18 +312,22 @@ private fun QuickMenuSheetContent(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             for (slot in 1..3) {
-                val hasSlot = remember(slot) { repository.hasStateSlot(game.title, slot) }
+                @Suppress("UNUSED_VARIABLE")
+                val trigger = stateUpdateTrigger
+                val lastSaved = remember(slot, stateUpdateTrigger) {
+                    repository.getStateSlotLastModified(game.title, slot)
+                }
+                val hasSlot = lastSaved > 0L
+                val timeStr = if (hasSlot) {
+                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(lastSaved))
+                } else null
+
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF222632),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF1E212A),
                     modifier = Modifier
                         .weight(1f)
-                        .border(1.dp, Color(0xFF33384A), RoundedCornerShape(10.dp))
-                        .clickable {
-                            val stateData = gameBoy.saveState()
-                            repository.saveStateSlot(game.title, slot, stateData)
-                            saveStatusMsg = "Saved to Slot $slot!"
-                        }
+                        .border(1.dp, if (hasSlot) Color(0xFF384052) else Color(0xFF282C38), RoundedCornerShape(12.dp))
                 ) {
                     Column(
                         modifier = Modifier.padding(10.dp),
@@ -328,18 +339,78 @@ private fun QuickMenuSheetContent(
                             fontSize = 13.sp,
                             color = Color.White
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = if (hasSlot) "Occupied" else "Empty",
-                            fontSize = 11.sp,
+                            text = if (hasSlot) "Saved $timeStr" else "Empty",
+                            fontSize = 10.sp,
                             color = if (hasSlot) Color(0xFF00E5FF) else Color(0xFF6B7280)
                         )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            // SAVE BUTTON
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF282D3A))
+                                    .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                    .clickable {
+                                        val stateData = gameBoy.saveState()
+                                        repository.saveStateSlot(game.title, slot, stateData)
+                                        stateUpdateTrigger++
+                                        saveStatusMsg = "Saved to Slot $slot!"
+                                    }
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "SAVE",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF00E5FF)
+                                )
+                            }
+
+                            // LOAD BUTTON
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (hasSlot) Color(0xFF1A3328) else Color(0xFF16181F))
+                                    .border(
+                                        1.dp,
+                                        if (hasSlot) Color(0xFF05FFA1).copy(alpha = 0.6f) else Color(0xFF2E3342),
+                                        RoundedCornerShape(6.dp)
+                                    )
+                                    .clickable(enabled = hasSlot) {
+                                        val data = repository.loadStateSlot(game.title, slot)
+                                        if (data != null && gameBoy.loadState(data)) {
+                                            saveStatusMsg = "Loaded Slot $slot!"
+                                        } else {
+                                            saveStatusMsg = "Failed to load Slot $slot"
+                                        }
+                                    }
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "LOAD",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (hasSlot) Color(0xFF05FFA1) else Color(0xFF4F5668)
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
 
         if (saveStatusMsg.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = saveStatusMsg,
                 color = Color(0xFF05FFA1),
@@ -358,27 +429,46 @@ private fun QuickMenuSheetContent(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
+        LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ColorPalette.entries.take(4).forEach { pal ->
+            items(ColorPalette.entries) { pal ->
                 val isSelected = settings.selectedPalette == pal
-                Box(
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) Color(0xFF222B38) else Color(0xFF1B1D24),
                     modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) Color(0xFF00E5FF) else Color(0xFF222632))
+                        .border(
+                            1.5.dp,
+                            if (isSelected) Color(0xFF00E5FF) else Color(0xFF2A2E3B),
+                            RoundedCornerShape(10.dp)
+                        )
                         .clickable { onPaletteChanged(pal) }
-                        .padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = pal.displayName.split(" ").first(),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isSelected) Color.Black else Color.White
-                    )
+                    Column(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // 4 Color dots preview
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            pal.colors.forEach { c ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(c))
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = pal.displayName,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) Color(0xFF00E5FF) else Color(0xFFD0D5E0)
+                        )
+                    }
                 }
             }
         }
