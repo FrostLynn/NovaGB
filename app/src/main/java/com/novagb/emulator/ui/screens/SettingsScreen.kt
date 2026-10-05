@@ -52,6 +52,7 @@ fun SettingsScreen(
 
     var showLcdGrid by remember { mutableStateOf(settings.showLcdGrid) }
     var showScanlines by remember { mutableStateOf(settings.showScanlines) }
+    var showRetroBezel by remember { mutableStateOf(settings.showRetroBezel) }
     var showFps by remember { mutableStateOf(settings.showFps) }
     var hapticsEnabled by remember { mutableStateOf(settings.hapticFeedbackEnabled) }
     var soundEnabled by remember { mutableStateOf(settings.soundEnabled) }
@@ -104,6 +105,16 @@ fun SettingsScreen(
                 onCheckedChange = {
                     showScanlines = it
                     settings.showScanlines = it
+                }
+            )
+
+            SettingsToggleItem(
+                title = "Authentic Retro Bezel",
+                subtitle = "Classic Game Boy console frame with branding and glowing power LED",
+                checked = showRetroBezel,
+                onCheckedChange = {
+                    showRetroBezel = it
+                    settings.showRetroBezel = it
                 }
             )
 

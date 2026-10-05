@@ -58,6 +58,10 @@ class AppSettings(context: Context) {
         get() = prefs.getBoolean("show_scanlines", false)
         set(value) = prefs.edit().putBoolean("show_scanlines", value).apply()
 
+    var showRetroBezel: Boolean
+        get() = prefs.getBoolean("show_retro_bezel", true)
+        set(value) = prefs.edit().putBoolean("show_retro_bezel", value).apply()
+
     var showFps: Boolean
         get() = prefs.getBoolean("show_fps", true)
         set(value) = prefs.edit().putBoolean("show_fps", value).apply()

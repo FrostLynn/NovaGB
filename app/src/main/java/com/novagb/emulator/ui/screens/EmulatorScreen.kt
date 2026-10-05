@@ -224,6 +224,7 @@ fun EmulatorScreen(
                 aspectRatioMode = settings.aspectRatio,
                 showLcdGrid = settings.showLcdGrid,
                 showScanlines = settings.showScanlines,
+                showRetroBezel = settings.showRetroBezel,
                 modifier = Modifier.weight(1f, fill = false),
                 frameIndexProvider = { frameVersion.longValue }
             )
