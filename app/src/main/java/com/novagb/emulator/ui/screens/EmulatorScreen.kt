@@ -1,5 +1,6 @@
 package com.novagb.emulator.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,8 +21,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -47,6 +52,7 @@ import com.novagb.emulator.core.GameBoy
 import com.novagb.emulator.core.JoypadButton
 import com.novagb.emulator.data.AppSettings
 import com.novagb.emulator.data.ColorPalette
+import com.novagb.emulator.data.EmulatorLogger
 import com.novagb.emulator.data.RomMetadata
 import com.novagb.emulator.data.RomRepository
 import com.novagb.emulator.ui.components.RetroDisplay
@@ -80,6 +86,7 @@ fun EmulatorScreen(
     val frameVersion = remember { mutableLongStateOf(0L) }
     var isRomLoaded by remember { mutableStateOf(false) }
     var romLoadError by remember { mutableStateOf<String?>(null) }
+    var emulationCrashError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(game) {
         withContext(Dispatchers.IO) {
@@ -136,8 +143,16 @@ fun EmulatorScreen(
             var nextFrameTimeNs = System.nanoTime()
 
             while (isActive) {
-                gameBoy.stepFrame()
-                frameVersion.longValue++
+                try {
+                    gameBoy.stepFrame()
+                    frameVersion.longValue++
+                } catch (t: Throwable) {
+                    EmulatorLogger.logError("GameLoop", "Emulation loop stepFrame crash", t, gameBoy)
+                    withContext(Dispatchers.Main) {
+                        emulationCrashError = t.message ?: "Unknown core emulation error"
+                    }
+                    break
+                }
 
                 frameCount++
                 val nowMs = System.currentTimeMillis()
@@ -269,6 +284,60 @@ fun EmulatorScreen(
                 )
             }
         }
+
+        if (emulationCrashError != null) {
+            AlertDialog(
+                onDismissRequest = { emulationCrashError = null },
+                title = {
+                    Text("Emulation Error", fontWeight = FontWeight.Bold, color = Color(0xFFFF5252))
+                },
+                text = {
+                    Column {
+                        Text(
+                            text = "A core emulation exception occurred:\n$emulationCrashError",
+                            color = Color.White,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Detailed CPU, PPU, and stack trace dumps have been captured.",
+                            color = Color(0xFF8E95A5),
+                            fontSize = 12.sp
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val success = EmulatorLogger.copyToClipboard(context)
+                            Toast.makeText(
+                                context,
+                                if (success) "Logs copied to clipboard!" else "Failed to copy logs",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF))
+                    ) {
+                        Text("Copy Logs", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = {
+                            val file = EmulatorLogger.exportToFile(context)
+                            Toast.makeText(
+                                context,
+                                if (file != null) "Logs saved: ${file.name}" else "Failed to export",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    ) {
+                        Text("Export File", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1E212B)
+            )
+        }
     }
 }
 
@@ -284,6 +353,7 @@ private fun QuickMenuSheetContent(
 ) {
     var saveStatusMsg by remember { mutableStateOf("") }
     var stateUpdateTrigger by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -467,6 +537,67 @@ private fun QuickMenuSheetContent(
                             color = if (isSelected) Color(0xFF00E5FF) else Color(0xFFD0D5E0)
                         )
                     }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Diagnostics & Logs",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFF182230),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable {
+                        val success = EmulatorLogger.copyToClipboard(context)
+                        saveStatusMsg = if (success) "Logs copied to clipboard!" else "Failed to copy logs"
+                    }
+            ) {
+                Box(
+                    modifier = Modifier.padding(10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Copy Logs",
+                        color = Color(0xFF00E5FF),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFF182230),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable {
+                        val file = EmulatorLogger.exportToFile(context)
+                        saveStatusMsg = if (file != null) "Saved to ${file.name}!" else "Failed to save file"
+                    }
+            ) {
+                Box(
+                    modifier = Modifier.padding(10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Save Log File",
+                        color = Color(0xFF00E5FF),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }

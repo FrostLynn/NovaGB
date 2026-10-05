@@ -1,5 +1,6 @@
 package com.novagb.emulator.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novagb.emulator.data.AppSettings
+import com.novagb.emulator.data.EmulatorLogger
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -181,6 +183,34 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsSectionTitle(title = "DIAGNOSTICS & LOGS")
+
+            SettingsActionItem(
+                title = "Copy Logs to Clipboard",
+                subtitle = "${EmulatorLogger.getLogCount()} diagnostic entries recorded",
+                onClick = {
+                    val success = EmulatorLogger.copyToClipboard(context)
+                    Toast.makeText(
+                        context,
+                        if (success) "Logs copied to clipboard" else "Failed to copy logs",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            )
+
+            SettingsActionItem(
+                title = "Save Logs to File",
+                subtitle = "Exports novagb_logs.txt to app files directory",
+                onClick = {
+                    val file = EmulatorLogger.exportToFile(context)
+                    Toast.makeText(
+                        context,
+                        if (file != null) "Logs saved: ${file.name}" else "Failed to save logs",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            )
+
             SettingsSectionTitle(title = "ABOUT")
 
             Column(
@@ -214,6 +244,36 @@ private fun SettingsSectionTitle(title: String) {
         color = Color(0xFF00E5FF),
         letterSpacing = 1.sp
     )
+}
+
+@Composable
+private fun SettingsActionItem(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF181A22))
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold, color = Color.White, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(subtitle, color = Color(0xFF8E95A5), fontSize = 12.sp)
+        }
+        Text(
+            text = "EXPORT",
+            color = Color(0xFF00E5FF),
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp
+        )
+    }
 }
 
 @Composable
