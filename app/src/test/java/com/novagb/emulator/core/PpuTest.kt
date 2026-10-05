@@ -84,4 +84,68 @@ class PpuTest {
         assertEquals(3, ppu.ly)
         assertEquals("LYC match bit (bit 2) should be 0 when LY!=LYC", 0, ppu.stat and 0x04)
     }
+
+    @Test
+    fun testDoubleBufferingPreventsMidFrameTearing() {
+        ppu.write(0xFF40, 0x00) // Off
+        // Fill VRAM tile 0 with non-zero color index
+        for (i in 0 until 16) {
+            mmu.vram[i] = 0xFF.toByte()
+        }
+        // Palette 0xFF (all shades darkest)
+        ppu.write(0xFF47, 0xFF)
+
+        // Turn on LCD
+        ppu.write(0xFF40, 0x91) // LCD on, BG on
+
+        val initialPixel = ppu.framebuffer[0]
+
+        // Advance 10 scanlines (10 * 456 cycles) - halfway through the active frame
+        ppu.step(10 * 456)
+        assertEquals(10, ppu.ly)
+
+        // Mid-frame: framebuffer (front buffer) must NOT reflect uncompleted frame pixels
+        assertEquals(
+            "Front framebuffer must not change mid-frame to prevent tearing",
+            initialPixel,
+            ppu.framebuffer[0]
+        )
+
+        // Complete the remaining lines up to V-Blank (total 144 lines = 144 * 456 = 65664)
+        ppu.step(134 * 456)
+        assertEquals(144, ppu.ly)
+
+        // Now that V-Blank is reached, front buffer is updated atomically!
+        assertEquals(
+            "Front framebuffer should be updated upon entering V-Blank",
+            ppu.paletteColors[3],
+            ppu.framebuffer[0]
+        )
+    }
+
+    @Test
+    fun testLcdQuickDisableDoesNotWipeFrontBufferImmediately() {
+        ppu.write(0xFF40, 0x00) // LCD off
+        // Complete a full frame so framebuffer has valid game graphics
+        for (i in 0 until 16) {
+            mmu.vram[i] = 0xFF.toByte()
+        }
+        ppu.write(0xFF47, 0xFF)
+        ppu.write(0xFF40, 0x91) // LCD on -> mode 2, ly = 0
+
+        // Run until V-Blank to populate front buffer
+        ppu.step(144 * 456)
+        val renderedPixel = ppu.framebuffer[0]
+        assertEquals(ppu.paletteColors[3], renderedPixel)
+
+        // Game disables LCD during V-Blank to perform quick VRAM transfer
+        ppu.write(0xFF40, 0x00)
+
+        // Front buffer must NOT be wiped immediately to prevent 1-frame screen flashes
+        assertEquals(
+            "Front buffer must keep last valid frame during brief LCD disable to prevent flickering",
+            renderedPixel,
+            ppu.framebuffer[0]
+        )
+    }
 }

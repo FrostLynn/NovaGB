@@ -6,6 +6,7 @@ package com.novagb.emulator.core
  */
 class Ppu(private val mmu: Mmu) {
 
+    private val backBuffer = IntArray(160 * 144)
     val framebuffer = IntArray(160 * 144)
     var onFrameReady: ((IntArray) -> Unit)? = null
 
@@ -37,6 +38,7 @@ class Ppu(private val mmu: Mmu) {
     )
 
     fun reset() {
+        backBuffer.fill(paletteColors[0])
         framebuffer.fill(paletteColors[0])
         lcdc = 0x91
         stat = 0x85
@@ -84,8 +86,7 @@ class Ppu(private val mmu: Mmu) {
                     cycleCounter = 0
                     setMode(0)
                     prevStatLine = false
-                    framebuffer.fill(paletteColors[0])
-                    onFrameReady?.invoke(framebuffer)
+                    backBuffer.fill(paletteColors[0])
                 } else if (!wasEnabled && nowEnabled) {
                     cycleCounter = 0
                     ly = 0
@@ -119,48 +120,57 @@ class Ppu(private val mmu: Mmu) {
 
         cycleCounter += cycles
 
-        when (getMode()) {
-            2 -> { // Mode 2: OAM search (80 cycles)
-                if (cycleCounter >= 80) {
-                    cycleCounter -= 80
-                    setMode(3)
-                }
-            }
-            3 -> { // Mode 3: Pixel transfer (172 cycles)
-                if (cycleCounter >= 172) {
-                    cycleCounter -= 172
-                    setMode(0)
-                    renderScanline()
-                }
-            }
-            0 -> { // Mode 0: H-Blank (204 cycles)
-                if (cycleCounter >= 204) {
-                    cycleCounter -= 204
-                    ly++
-                    checkLyc()
-
-                    if (ly == 144) {
-                        // Enter V-Blank
-                        setMode(1)
-                        mmu.requestInterrupt(InterruptType.VBLANK)
-                        onFrameReady?.invoke(framebuffer)
-                    } else {
-                        setMode(2)
+        var keepGoing = true
+        while (keepGoing) {
+            keepGoing = false
+            when (getMode()) {
+                2 -> { // Mode 2: OAM search (80 cycles)
+                    if (cycleCounter >= 80) {
+                        cycleCounter -= 80
+                        setMode(3)
+                        keepGoing = true
                     }
                 }
-            }
-            1 -> { // Mode 1: V-Blank (456 cycles per line for 10 lines)
-                if (cycleCounter >= 456) {
-                    cycleCounter -= 456
-                    ly++
-                    checkLyc()
-
-                    if (ly > 153) {
-                        // Frame complete, wrap back to scanline 0
-                        ly = 0
-                        windowLineCounter = 0
-                        setMode(2)
+                3 -> { // Mode 3: Pixel transfer (172 cycles)
+                    if (cycleCounter >= 172) {
+                        cycleCounter -= 172
+                        setMode(0)
+                        renderScanline()
+                        keepGoing = true
+                    }
+                }
+                0 -> { // Mode 0: H-Blank (204 cycles)
+                    if (cycleCounter >= 204) {
+                        cycleCounter -= 204
+                        ly++
                         checkLyc()
+
+                        if (ly == 144) {
+                            // Enter V-Blank
+                            setMode(1)
+                            mmu.requestInterrupt(InterruptType.VBLANK)
+                            System.arraycopy(backBuffer, 0, framebuffer, 0, 160 * 144)
+                            onFrameReady?.invoke(framebuffer)
+                        } else {
+                            setMode(2)
+                        }
+                        keepGoing = true
+                    }
+                }
+                1 -> { // Mode 1: V-Blank (456 cycles per line for 10 lines)
+                    if (cycleCounter >= 456) {
+                        cycleCounter -= 456
+                        ly++
+                        checkLyc()
+
+                        if (ly > 153) {
+                            // Frame complete, wrap back to scanline 0
+                            ly = 0
+                            windowLineCounter = 0
+                            setMode(2)
+                            checkLyc()
+                        }
+                        keepGoing = true
                     }
                 }
             }
@@ -257,7 +267,7 @@ class Ppu(private val mmu: Mmu) {
 
             scanlineBgColorIndices[x] = colorIndex
             val shade = (bgp ushr (colorIndex * 2)) and 0x03
-            framebuffer[fbRowOffset + x] = paletteColors[shade]
+            backBuffer[fbRowOffset + x] = paletteColors[shade]
         }
     }
 
@@ -297,7 +307,7 @@ class Ppu(private val mmu: Mmu) {
 
             scanlineBgColorIndices[x] = colorIndex
             val shade = (bgp ushr (colorIndex * 2)) and 0x03
-            framebuffer[fbRowOffset + x] = paletteColors[shade]
+            backBuffer[fbRowOffset + x] = paletteColors[shade]
         }
 
         if (windowDrawn) {
@@ -365,7 +375,7 @@ class Ppu(private val mmu: Mmu) {
                 }
 
                 val shade = (palette ushr (colorIndex * 2)) and 0x03
-                framebuffer[fbRowOffset + screenX] = paletteColors[shade]
+                backBuffer[fbRowOffset + screenX] = paletteColors[shade]
             }
         }
     }
