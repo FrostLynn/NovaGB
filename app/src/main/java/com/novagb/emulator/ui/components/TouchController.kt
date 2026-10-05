@@ -138,7 +138,7 @@ fun TouchController(
                 .fillMaxWidth()
                 .padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
+            verticalAlignment = Alignment.CenterVertically
         ) {
             if (classicDmgTheme) {
                 ClassicDmgDPad(
@@ -365,81 +365,86 @@ private fun ClassicDmgDPad(
 private fun ClassicDmgActionButtons(
     onButtonChange: (JoypadButton, Boolean) -> Unit
 ) {
-    Box(
-        modifier = Modifier.size(175.dp),
-        contentAlignment = Alignment.Center
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .offset(y = 10.dp)
-                .width(148.dp)
-                .height(72.dp)
-                .graphicsLayer(rotationZ = -26f)
-                .clip(RoundedCornerShape(36.dp))
-                .background(Color(0xFFB8BAC0))
-                .border(1.5.dp, Color(0xFFA0A3AB), RoundedCornerShape(36.dp))
-        )
-
-        TurboActionButton(
-            label = "TB",
-            color = Color(0xFF88153A),
-            button = JoypadButton.B,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = 10.dp, y = (-2).dp),
-            onButtonPulse = onButtonChange
-        )
-
-        TurboActionButton(
-            label = "TA",
-            color = Color(0xFF88153A),
-            button = JoypadButton.A,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = (-10).dp, y = (-8).dp),
-            onButtonPulse = onButtonChange
-        )
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .offset(x = 14.dp, y = 8.dp)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            DmgRoundButton(
-                label = "",
-                color = Color(0xFF9E1644),
-                onPressChange = { onButtonChange(JoypadButton.B, it) }
+            TurboActionButton(
+                label = "TB",
+                color = Color(0xFF88153A),
+                button = JoypadButton.B,
+                onButtonPulse = onButtonChange
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "B",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.ExtraBold,
-                fontStyle = FontStyle.Italic,
-                color = Color(0xFF0F205A)
+            TurboActionButton(
+                label = "TA",
+                color = Color(0xFF88153A),
+                button = JoypadButton.A,
+                onButtonPulse = onButtonChange
             )
         }
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Box(
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .offset(x = (-4).dp, y = (-6).dp)
+                .width(152.dp)
+                .height(88.dp),
+            contentAlignment = Alignment.Center
         ) {
-            DmgRoundButton(
-                label = "",
-                color = Color(0xFF9E1644),
-                onPressChange = { onButtonChange(JoypadButton.A, it) }
+            Box(
+                modifier = Modifier
+                    .width(140.dp)
+                    .height(66.dp)
+                    .graphicsLayer(rotationZ = -26f)
+                    .clip(RoundedCornerShape(33.dp))
+                    .background(Color(0xFFB8BAC0))
+                    .border(1.5.dp, Color(0xFFA0A3AB), RoundedCornerShape(33.dp))
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "A",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.ExtraBold,
-                fontStyle = FontStyle.Italic,
-                color = Color(0xFF0F205A)
-            )
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = 8.dp, y = 4.dp)
+            ) {
+                DmgRoundButton(
+                    label = "",
+                    color = Color(0xFF9E1644),
+                    onPressChange = { onButtonChange(JoypadButton.B, it) }
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "B",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontStyle = FontStyle.Italic,
+                    color = Color(0xFF0F205A)
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(x = (-8).dp, y = (-8).dp)
+            ) {
+                DmgRoundButton(
+                    label = "",
+                    color = Color(0xFF9E1644),
+                    onPressChange = { onButtonChange(JoypadButton.A, it) }
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "A",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontStyle = FontStyle.Italic,
+                    color = Color(0xFF0F205A)
+                )
+            }
         }
     }
 }
@@ -691,47 +696,53 @@ private fun calculateDirections(x: Float, y: Float, width: Float, height: Float)
 private fun ActionButtonsGroup(
     onButtonChange: (JoypadButton, Boolean) -> Unit
 ) {
-    Box(
-        modifier = Modifier.size(170.dp),
-        contentAlignment = Alignment.Center
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TurboActionButton(
-            label = "TB",
-            color = Color(0xFFFF2A6D),
-            button = JoypadButton.B,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = 14.dp, y = 10.dp),
-            onButtonPulse = onButtonChange
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TurboActionButton(
+                label = "TB",
+                color = Color(0xFFFF2A6D),
+                button = JoypadButton.B,
+                onButtonPulse = onButtonChange
+            )
+            TurboActionButton(
+                label = "TA",
+                color = Color(0xFF00E5FF),
+                button = JoypadButton.A,
+                onButtonPulse = onButtonChange
+            )
+        }
 
-        TurboActionButton(
-            label = "TA",
-            color = Color(0xFF00E5FF),
-            button = JoypadButton.A,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = (-14).dp, y = 0.dp),
-            onButtonPulse = onButtonChange
-        )
+        Spacer(modifier = Modifier.height(10.dp))
 
-        CircularActionButton(
-            label = "B",
-            color = Color(0xFFFF2A6D),
+        Box(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .offset(x = 8.dp, y = (-10).dp),
-            onPressChange = { onButtonChange(JoypadButton.B, it) }
-        )
+                .width(152.dp)
+                .height(80.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularActionButton(
+                label = "B",
+                color = Color(0xFFFF2A6D),
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = 4.dp, y = 4.dp),
+                onPressChange = { onButtonChange(JoypadButton.B, it) }
+            )
 
-        CircularActionButton(
-            label = "A",
-            color = Color(0xFF00E5FF),
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .offset(x = (-6).dp, y = 16.dp),
-            onPressChange = { onButtonChange(JoypadButton.A, it) }
-        )
+            CircularActionButton(
+                label = "A",
+                color = Color(0xFF00E5FF),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(x = (-4).dp, y = (-8).dp),
+                onPressChange = { onButtonChange(JoypadButton.A, it) }
+            )
+        }
     }
 }
 
