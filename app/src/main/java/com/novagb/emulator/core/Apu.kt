@@ -83,6 +83,11 @@ class Apu {
     private var sampleCycles: Float = 0f
     private val cyclesPerSample = 4194304f / 44100f
 
+    // High-pass DC filter capacitor state (simulates analog output capacitor)
+    private var leftCap: Float = 0f
+    private var rightCap: Float = 0f
+    private val highPassRate: Float = 0.9995f
+
     // Wave duty waveforms (8 steps)
     private val dutyPatterns = arrayOf(
         intArrayOf(0, 0, 0, 0, 0, 0, 0, 1), // 12.5%
@@ -105,6 +110,8 @@ class Apu {
         frameSequencerStep = 0
         sampleCycles = 0f
         wavePattern.fill(0)
+        leftCap = 0f
+        rightCap = 0f
     }
 
     fun read(addr: Int): Int {
@@ -467,8 +474,18 @@ class Apu {
         val leftVol = ((nr50 ushr 4) and 0x07) + 1
         val rightVol = (nr50 and 0x07) + 1
 
-        val leftFinal = (left * leftVol * 64).coerceIn(-32768, 32767).toShort()
-        val rightFinal = (right * rightVol * 64).coerceIn(-32768, 32767).toShort()
+        val leftRaw = (left * leftVol * 64).toFloat()
+        val rightRaw = (right * rightVol * 64).toFloat()
+
+        // Apply high-pass capacitor filter to eliminate DC bias and popping clicks
+        val leftFiltered = leftRaw - leftCap
+        leftCap = leftRaw - leftFiltered * highPassRate
+
+        val rightFiltered = rightRaw - rightCap
+        rightCap = rightRaw - rightFiltered * highPassRate
+
+        val leftFinal = leftFiltered.coerceIn(-32768f, 32767f).toInt().toShort()
+        val rightFinal = rightFiltered.coerceIn(-32768f, 32767f).toInt().toShort()
 
         if (sampleBufferIndex + 1 < sampleBuffer.size) {
             sampleBuffer[sampleBufferIndex++] = leftFinal
