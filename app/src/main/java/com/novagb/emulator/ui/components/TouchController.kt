@@ -408,7 +408,7 @@ private fun ClassicDmgActionButtons(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .offset(x = (-30).dp, y = 12.dp)
+                    .offset(x = (-30).dp, y = 16.dp)
             ) {
                 DmgRoundButton(
                     label = "",
@@ -429,7 +429,7 @@ private fun ClassicDmgActionButtons(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .offset(x = 30.dp, y = (-18).dp)
+                    .offset(x = 30.dp, y = (-14).dp)
             ) {
                 DmgRoundButton(
                     label = "",
