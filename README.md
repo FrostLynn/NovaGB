@@ -1,124 +1,162 @@
-# NovaGB - Modern Game Boy Emulator for Android
+# NovaGB
 
-NovaGB adalah emulator Game Boy (DMG) dan Game Boy Color (CGB) modern berkinerja tinggi untuk platform Android yang dibangun dengan **Kotlin murni**, **Jetpack Compose**, dan **Material 3**. Proyek ini juga dilengkapi dengan arsitektur bridge C++/NDK yang siap digunakan untuk adaptasi core native seperti Gambatte atau SameBoy.
-
----
-
-## Fitur Utama
-
-- **Core Emulation Akurat**:
-  - Emulasi CPU Sharp LR35902 (Z80 hybrid) 4.194304 MHz lengkap dengan semua opcode standar (0x00-0xFF) dan opcode CB-prefixed.
-  - PPU Scanline Renderer (160×144) dengan dukungan Background tile mapping, Window tile layer, dan 40 OAM sprites (mode 8×8 & 8×16) berprioritas.
-  - APU Audio 4-Channel: Pulse 1 (Sweep/Duty), Pulse 2 (Duty), Channel 3 (Wave RAM 32-sample), dan Channel 4 (Noise LFSR) dengan mixer stereo PCM 44.1 kHz.
-  - Timer hardware lengkap (DIV, TIMA, TMA, TAC) dan Joypad matrix (0xFF00) dengan interrupt trigger.
-  - Cartridge Mapper: ROM Only, MBC1 (16Mbit ROM / 32KByte RAM), MBC2 (512x4 RAM), MBC3 (Timer RTC latched), dan MBC5 (hingga 8MB ROM / 128KB RAM).
-  - Battery Save (`.sav`) & Snapshot Save States (`.state`).
-
-- **Antarmuka Modern (Jetpack Compose & Material 3)**:
-  - Desain OLED Dark Theme dengan aksen Electric Cyan dan Neon Magenta.
-  - Edge-to-edge layout dengan status bar dan navigation bar adaptif.
-  - ROM Library Dashboard dengan Card metadata, pencarian cepat, waktu bermain, dan FAB impor berkas menggunakan Storage Access Framework (SAF).
-  - Manajemen koleksi ROM lokal persisten yang tersimpan otomatis di perangkat.
-
-- **Display & Retro Shaders**:
-  - Mode Aspek Rasio: Original 10:9, Integer Scale 3x, Fit Screen, dan Stretch Full.
-  - Shader Grid Dot-Matrix LCD khas Game Boy asli.
-  - Filter garis pindaian (CRT Scanlines).
-  - Palet Warna Realtime:
-    - **DMG Classic**: Nuansa pea-soup green ikonik (`#0F380F` - `#9BBC0F`).
-    - **Pocket Gray**: Hitam putih tajam Game Boy Pocket.
-    - **Game Boy Light**: Teal backlight indiglo.
-    - **Cyberpunk Neon**: Estetika modern berani.
-    - **Golden Amber**: Nuansa retro monokrom hangat.
-
-- **Kontrol Sentuh & Gamepad Eksternal**:
-  - On-screen touch controller dengan tampilan frosted glass elegan dan opasitas yang dapat diatur.
-  - D-pad radial dengan deteksi gestur swipe 8-arah halus.
-  - Tombol A, B, Select, Start, dan tombol Turbo.
-  - Umpan balik getaran taktil (**Haptic Feedback**) menggunakan Android `VibrationEffect`.
-  - Dukungan gamepad nirkabel Bluetooth dan USB (Xbox, PS4/PS5, 8BitDo) secara otomatis melalui key event dan thumbstick joystick.
-
-- **Adaptasi Native Core (C++/NDK)**:
-  - Tersedia `app/src/main/cpp/CMakeLists.txt` dan `native-lib.cpp` beserta wrapper Kotlin `NativeGbBridge.kt` bagi yang ingin menghubungkan langsung source code C/C++ Gambatte atau SameBoy.
+NovaGB is an open-source Game Boy (DMG) and Game Boy Color (CGB) emulator for Android. The core and user interface are written in Kotlin using Jetpack Compose and Material 3. The project also includes an optional C++/NDK JNI bridge for integrating native cores such as Gambatte or SameBoy.
 
 ---
 
-## Struktur Direktori
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/gameplay_pokemon.jpg" width="45%" alt="NovaGB Modern Theme running Pokemon Red at 119 FPS with 2x speed" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/classic_dmg_theme.jpg" width="45%" alt="NovaGB Classic DMG-01 Console Shell Theme" />
+</p>
+
+*Left: Modern dark theme with retro bezel, 2x fast-forward, and real-time FPS counter. Right: Classic DMG-01 console shell with textured buttons and speaker grille.*
+
+---
+
+## Features
+
+### Core Emulation
+
+- **Sharp LR35902 CPU**: Full emulation of the 4.194304 MHz Z80 hybrid processor, covering all primary opcodes (`0x00`-`0xFF`) and `CB`-prefixed extended instructions. Handles interrupt dispatch (V-Blank, LCD STAT, Timer, Serial, Joypad), HALT state bug reproduction, and EI instruction delay.
+- **PPU Scanline Renderer**: Cycle-accurate pixel processing unit running at 160x144 resolution with double buffering. Supports background tilemaps, the window overlay layer, and up to 40 sprites (8x8 and 8x16 modes) with coordinate-based priority resolution.
+- **4-Channel APU**: Stereo sound generation via 44.1 kHz PCM output using AudioTrack streaming:
+  - Channel 1: Pulse wave with frequency sweep and duty cycle control.
+  - Channel 2: Pulse wave with duty cycle control.
+  - Channel 3: Custom 32-sample 4-bit Wave RAM playback.
+  - Channel 4: Pseudo-random white noise via Linear Feedback Shift Register (LFSR).
+  - High-pass IIR filter to eliminate DC bias and popping artifacts.
+- **Hardware Timers**: Complete implementation of DIV, TIMA, TMA, and TAC registers, including falling-edge multiplexer behavior and delayed overflow interrupts.
+- **Cartridge Memory Bank Controllers**:
+  - ROM Only (up to 32 KB)
+  - MBC1 (up to 2 MB ROM / 32 KB RAM, bank 0 switching quirks, RAM banking)
+  - MBC2 (built-in 512x4-bit internal RAM)
+  - MBC3 (up to 2 MB ROM / 32 KB RAM with latched Real-Time Clock registers)
+  - MBC5 (up to 8 MB ROM / 128 KB RAM with 9-bit ROM bank addressing)
+- **Save Management**: Battery-backed SRAM auto-saves (`.sav` format) and snapshot save states (`.state` format) with slot selection and timestamps.
+
+### Interface and Display
+
+- **Two Console Themes**:
+  - **Modern Dark**: OLED-friendly dark background with electric cyan and magenta accents.
+  - **Classic DMG-01**: Authentic light warm-gray ABS plastic body, textured D-pad with concave thumb rest, angled magenta A and B buttons inside a diagonal capsule recess, rubber SELECT/START pills, and a 6-slot speaker grille.
+- **Retro Bezel Display**: Optional hardware-style display border with "DOT MATRIX WITH STEREO SOUND" branding, red power LED, and "GAME BOY™" lettering.
+- **Color Palettes**:
+  - Classic DMG (authentic pea-soup green)
+  - Pocket Gray (high-contrast monochrome)
+  - Game Boy Light (indiglo teal backlight)
+  - Cyberpunk Neon
+  - Golden Amber
+- **Screen Scaling**: Original 10:9, Integer Scale (3x), Fit Screen, and Full Stretch modes with optional LCD dot-matrix grid overlay.
+- **Game Library**: ROM dashboard with persistent SQLite storage, metadata extraction, search, sorting, and automatic box art fetching via the Libretro Thumbnails repository.
+- **Diagnostics**: Built-in circular log buffer, crash boundary dialog, and one-tap log export to file or system clipboard.
+
+### Controls
+
+- **Virtual Touch Controls**:
+  - 8-way directional pad with angle detection for diagonals.
+  - Tactile haptic feedback on button presses via the Android vibrator service.
+  - Dedicated turbo buttons (TA and TB) for automatic rapid-fire inputs.
+  - Fast-forward toggle button (up to 2x speed).
+  - Adjustable controller opacity and scaling.
+- **Physical Gamepad Support**: Automatic mapping for Bluetooth and USB gamepads (Xbox, PlayStation DualShock/DualSense, 8BitDo, and generic HID controllers) via Android key events and joystick axes.
+
+---
+
+## Project Structure
 
 ```text
-D:\Projects\GB\
+NovaGB/
 ├── app/
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── cpp/                         # CMake & C++ JNI bridge (Gambatte/SameBoy)
+│   │   │   ├── cpp/                         # Optional C++ JNI bridge for native cores
 │   │   │   ├── java/com/novagb/emulator/
 │   │   │   │   ├── audio/                   # GbAudioPlayer (AudioTrack streaming)
 │   │   │   │   ├── core/                    # Cpu, Mmu, Cartridge, Ppu, Apu, Joypad, Timer, GameBoy
-│   │   │   │   ├── data/                    # AppSettings, RomMetadata, RomRepository
+│   │   │   │   ├── data/                    # AppSettings, RomMetadata, RomRepository, EmulatorLogger
 │   │   │   │   ├── ui/
-│   │   │   │   │   ├── components/          # RetroDisplay, TouchController
+│   │   │   │   │   ├── components/          # RetroDisplay, TouchController, GameCoverArt
 │   │   │   │   │   ├── screens/             # LibraryScreen, EmulatorScreen, SettingsScreen
 │   │   │   │   │   └── theme/               # Color, Theme, Type
-│   │   │   │   └── MainActivity.kt          # Compose Navigation & Gamepad Input
-│   │   │   ├── res/                         # Strings, colors, vector drawables
+│   │   │   │   └── MainActivity.kt          # Navigation and controller input routing
+│   │   │   ├── res/                         # Android application resources
 │   │   │   └── AndroidManifest.xml
-│   │   └── test/java/com/novagb/emulator/   # Unit tests (CpuTest, CartridgeTest)
+│   │   └── test/java/com/novagb/emulator/   # Unit test suite (CPU, Timer, PPU, MBC)
 │   └── build.gradle.kts
+├── docs/
+│   └── screenshots/                         # Application screenshots
 ├── gradle/
-│   ├── libs.versions.toml                   # Gradle Version Catalog
-│   └── wrapper/gradle-wrapper.properties
+│   └── libs.versions.toml                   # Version catalog
 ├── build.gradle.kts
 ├── settings.gradle.kts
-├── ARCHITECTURE.md                          # Dokumentasi arsitektur internal
 └── README.md
 ```
 
 ---
 
-## Cara Menjalankan & Membangun APK
+## Building from Source
 
-### 1. Menggunakan Android Studio
-1. Buka **Android Studio** (versi Koala / Ladybug atau yang lebih baru).
-2. Pilih **Open** dan arahkan ke folder `D:\Projects\GB`.
-3. Tunggu Gradle sync selesai.
-4. Hubungkan perangkat Android fisik atau jalankan Android Emulator.
-5. Klik tombol **Run  app** (`Shift + F10`).
+### Prerequisites
 
-### 2. Menggunakan Command Line (Gradle)
-Pastikan `JAVA_HOME` mengarah ke JDK 17 atau yang lebih baru:
+- Android Studio Koala / Ladybug (2024.1+) or newer.
+- JDK 17 (Adoptium Temurin or Android Studio bundled OpenJDK).
+- Android SDK with platform `android-35` and build-tools `35.0.0`.
+
+### Build via Command Line
+
+Set your environment variables:
 
 ```bash
-# Menjalankan unit tests
-./gradlew test
+export JAVA_HOME="/path/to/jdk-17"
+export ANDROID_HOME="/path/to/android-sdk"
+export PATH="$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+```
 
-# Membangun APK Debug
+Run unit tests:
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+Build the debug APK:
+
+```bash
 ./gradlew assembleDebug
+```
 
-# Output APK tersimpan di:
-# app/build/outputs/apk/debug/app-debug.apk
+The compiled APK will be located at:
+`app/build/outputs/apk/debug/app-debug.apk`
 
-# Menginstal langsung ke HP Android yang terhubung via ADB:
+Install directly to a connected Android device:
+
+```bash
 ./gradlew installDebug
 ```
 
 ---
 
-## Kontrol Default
+## Default Controls
 
-| Tombol Game Boy | Layar Sentuh | Keyboard | Gamepad Bluetooth / USB |
+| Action | Touch Controller | Keyboard | Gamepad (Bluetooth / USB) |
 | :--- | :--- | :--- | :--- |
-| **D-Pad Up** | D-Pad Atas | W / Panah Atas | D-Pad Atas / Analog Kiri |
-| **D-Pad Down** | D-Pad Bawah | S / Panah Bawah | D-Pad Bawah / Analog Kiri |
-| **D-Pad Left** | D-Pad Kiri | A / Panah Kiri | D-Pad Kiri / Analog Kiri |
-| **D-Pad Right** | D-Pad Kanan | D / Panah Kanan | D-Pad Kanan / Analog Kiri |
-| **Tombol A** | Tombol Cyan A | K | Tombol A / Cross |
-| **Tombol B** | Tombol Magenta B | J | Tombol B / Circle |
-| **Select** | Tombol SELECT | Spasi | Tombol Back / Select |
-| **Start** | Tombol START | Enter | Tombol Start |
-| **Fast Forward** | Tombol Turbo | - | Right Bumper (R1) |
-| **Quick Menu** | Tombol MENU | Escape | Home / Guide |
+| **D-Pad Up** | Virtual Up | W / Up Arrow | D-Pad Up / Left Stick Up |
+| **D-Pad Down** | Virtual Down | S / Down Arrow | D-Pad Down / Left Stick Down |
+| **D-Pad Left** | Virtual Left | A / Left Arrow | D-Pad Left / Left Stick Left |
+| **D-Pad Right** | Virtual Right | D / Right Arrow | D-Pad Right / Left Stick Right |
+| **Button A** | Virtual A | K | Button A / Cross |
+| **Button B** | Virtual B | J | Button B / Circle |
+| **Turbo A** | Virtual TA | - | - |
+| **Turbo B** | Virtual TB | - | - |
+| **Select** | Virtual SELECT | Space | Back / Select |
+| **Start** | Virtual START | Enter | Start |
+| **Fast Forward** | 2X TURBO pill | Tab | Right Bumper (R1) |
+| **In-Game Menu** | MENU pill | Escape | Guide / Home |
 
 ---
 
-## Lisensi
-Proyek ini dibuat untuk tujuan edukasi dan emulasi open-source. Bebas dikembangkan dan dimodifikasi lebih lanjut.
+## License
+
+This project is licensed under the MIT License. It is intended for educational and open-source emulation development.
