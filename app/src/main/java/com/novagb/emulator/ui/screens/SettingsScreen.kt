@@ -222,7 +222,7 @@ fun SettingsScreen(
             ) {
                 Text("NovaGB Emulator", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Version 0.0.1 (Alpha)", color = Color(0xFF8E95A5), fontSize = 13.sp)
+                Text("Version 0.0.2 (Alpha)", color = Color(0xFF8E95A5), fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "Built with Jetpack Compose & Kotlin. Clean architecture, high-performance cycle emulation, and modern Android Material 3 design.",
