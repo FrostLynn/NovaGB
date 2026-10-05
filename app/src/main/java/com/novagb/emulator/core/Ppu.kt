@@ -26,6 +26,7 @@ class Ppu(private val mmu: Mmu) {
     private var cycleCounter: Int = 0
     private var windowLineCounter: Int = 0
     private val scanlineBgColorIndices = IntArray(160) // For sprite priority checking
+    private var prevStatLine: Boolean = false
 
     // Default DMG Green Palette (ARGB)
     var paletteColors = intArrayOf(
@@ -50,6 +51,7 @@ class Ppu(private val mmu: Mmu) {
         wx = 0
         cycleCounter = 0
         windowLineCounter = 0
+        prevStatLine = false
     }
 
     fun read(addr: Int): Int {
@@ -81,17 +83,20 @@ class Ppu(private val mmu: Mmu) {
                     ly = 0
                     cycleCounter = 0
                     setMode(0)
+                    prevStatLine = false
                     framebuffer.fill(paletteColors[0])
                     onFrameReady?.invoke(framebuffer)
                 } else if (!wasEnabled && nowEnabled) {
                     cycleCounter = 0
                     ly = 0
                     setMode(2)
+                    checkLyc()
                 }
             }
             0xFF41 -> {
                 // Bits 0-2 are read-only
                 stat = (stat and 0x07) or (v and 0xF8)
+                updateStatLine()
             }
             0xFF42 -> scy = v
             0xFF43 -> scx = v
@@ -126,7 +131,6 @@ class Ppu(private val mmu: Mmu) {
                     cycleCounter -= 172
                     setMode(0)
                     renderScanline()
-                    checkStatInterrupt(0x08) // Mode 0 interrupt
                 }
             }
             0 -> { // Mode 0: H-Blank (204 cycles)
@@ -139,11 +143,9 @@ class Ppu(private val mmu: Mmu) {
                         // Enter V-Blank
                         setMode(1)
                         mmu.requestInterrupt(InterruptType.VBLANK)
-                        checkStatInterrupt(0x10) // Mode 1 interrupt
                         onFrameReady?.invoke(framebuffer)
                     } else {
                         setMode(2)
-                        checkStatInterrupt(0x20) // Mode 2 interrupt
                     }
                 }
             }
@@ -158,7 +160,6 @@ class Ppu(private val mmu: Mmu) {
                         ly = 0
                         windowLineCounter = 0
                         setMode(2)
-                        checkStatInterrupt(0x20)
                         checkLyc()
                     }
                 }
@@ -170,22 +171,37 @@ class Ppu(private val mmu: Mmu) {
 
     private fun setMode(mode: Int) {
         stat = (stat and 0xFC) or (mode and 0x03)
+        updateStatLine()
     }
 
     private fun checkLyc() {
         val equal = ly == lyc
         if (equal) {
             stat = stat or 0x04
-            checkStatInterrupt(0x40) // LYC=LY interrupt
         } else {
             stat = stat and 0x04.inv()
         }
+        updateStatLine()
     }
 
-    private fun checkStatInterrupt(mask: Int) {
-        if ((stat and mask) != 0) {
+    private fun updateStatLine() {
+        if ((lcdc and 0x80) == 0) {
+            prevStatLine = false
+            return
+        }
+
+        val mode = stat and 0x03
+        val lycMatch = (stat and 0x04) != 0
+
+        val line = ((stat and 0x40) != 0 && lycMatch) ||
+                   ((stat and 0x20) != 0 && mode == 2) ||
+                   ((stat and 0x10) != 0 && mode == 1) ||
+                   ((stat and 0x08) != 0 && mode == 0)
+
+        if (!prevStatLine && line) {
             mmu.requestInterrupt(InterruptType.LCD_STAT)
         }
+        prevStatLine = line
     }
 
     private fun renderScanline() {
