@@ -2,10 +2,12 @@ package com.novagb.emulator.data
 
 import android.content.Context
 import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import com.novagb.emulator.core.Cartridge
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.net.URLEncoder
 import java.util.UUID
 
 class RomRepository(private val context: Context) {
@@ -25,6 +27,17 @@ class RomRepository(private val context: Context) {
         }
     }
 
+    fun buildCoverUrl(isCgb: Boolean, queryName: String): String {
+        val systemFolder = if (isCgb) "Nintendo_-_Game_Boy_Color" else "Nintendo_-_Game_Boy"
+        val sanitized = queryName.trim().replace(Regex("[/\\\\:*?\"<>|]"), "_")
+        val encoded = try {
+            URLEncoder.encode(sanitized, "UTF-8").replace("+", "%20")
+        } catch (_: Exception) {
+            sanitized
+        }
+        return "https://raw.githubusercontent.com/libretro-thumbnails/$systemFolder/master/Named_Boxarts/$encoded.png"
+    }
+
     fun parseRomMetadata(uri: Uri, bytes: ByteArray): RomMetadata {
         val cart = Cartridge.fromRom(bytes)
         val cartTypeStr = when (cart.header.cartridgeType) {
@@ -36,6 +49,16 @@ class RomRepository(private val context: Context) {
             else -> "MBC"
         }
 
+        val docFile = try {
+            DocumentFile.fromSingleUri(context, uri)
+        } catch (_: Exception) {
+            null
+        }
+        val queryTitle = docFile?.name?.replace(Regex("\\.(gb|gbc|bin|zip)$", RegexOption.IGNORE_CASE), "")
+            ?.takeIf { it.isNotBlank() } ?: cart.header.title
+
+        val cover = buildCoverUrl(cart.header.isCgb, queryTitle)
+
         return RomMetadata(
             id = UUID.randomUUID().toString(),
             title = cart.header.title,
@@ -46,7 +69,8 @@ class RomRepository(private val context: Context) {
             romSizeBytes = bytes.size.toLong(),
             lastPlayedTimestamp = System.currentTimeMillis(),
             totalPlayTimeSeconds = 0,
-            bannerColorSeed = cart.header.title.hashCode()
+            bannerColorSeed = cart.header.title.hashCode(),
+            coverUrl = cover
         )
     }
 
@@ -58,18 +82,24 @@ class RomRepository(private val context: Context) {
             val list = mutableListOf<RomMetadata>()
             for (i in 0 until array.length()) {
                 val obj = array.getJSONObject(i)
+                val isCgb = obj.optBoolean("isCgb", false)
+                val title = obj.optString("title", "Unknown")
+                val cover = obj.optString("coverUrl", "").takeIf { it.isNotBlank() }
+                    ?: buildCoverUrl(isCgb, title)
+
                 list.add(
                     RomMetadata(
                         id = obj.optString("id", UUID.randomUUID().toString()),
-                        title = obj.optString("title", "Unknown"),
+                        title = title,
                         uriString = obj.optString("uriString", ""),
                         isAsset = obj.optBoolean("isAsset", false),
-                        isCgb = obj.optBoolean("isCgb", false),
+                        isCgb = isCgb,
                         cartridgeType = obj.optString("cartridgeType", "MBC1"),
                         romSizeBytes = obj.optLong("romSizeBytes", 0L),
                         lastPlayedTimestamp = obj.optLong("lastPlayedTimestamp", 0L),
                         totalPlayTimeSeconds = obj.optLong("totalPlayTimeSeconds", 0L),
-                        bannerColorSeed = obj.optInt("bannerColorSeed", 0)
+                        bannerColorSeed = obj.optInt("bannerColorSeed", 0),
+                        coverUrl = cover
                     )
                 )
             }
@@ -94,6 +124,7 @@ class RomRepository(private val context: Context) {
                     put("lastPlayedTimestamp", rom.lastPlayedTimestamp)
                     put("totalPlayTimeSeconds", rom.totalPlayTimeSeconds)
                     put("bannerColorSeed", rom.bannerColorSeed)
+                    put("coverUrl", rom.coverUrl ?: "")
                 }
                 array.put(obj)
             }

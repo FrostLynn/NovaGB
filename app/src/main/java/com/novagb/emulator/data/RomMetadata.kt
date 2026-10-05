@@ -10,5 +10,6 @@ data class RomMetadata(
     val romSizeBytes: Long = 0,
     val lastPlayedTimestamp: Long = 0,
     val totalPlayTimeSeconds: Long = 0,
-    val bannerColorSeed: Int = 0
+    val bannerColorSeed: Int = 0,
+    val coverUrl: String? = null
 )

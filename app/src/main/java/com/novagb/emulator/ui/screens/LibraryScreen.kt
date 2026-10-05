@@ -51,7 +51,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import coil.compose.SubcomposeAsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -315,6 +317,56 @@ fun LibraryScreen(
 }
 
 /**
+ * Game cover art component that fetches official box art from Libretro CDN,
+ * falling back gracefully to the miniature RetroCartridgeThumbnail when offline or missing.
+ */
+@Composable
+fun GameCoverArt(
+    coverUrl: String?,
+    isCgb: Boolean,
+    title: String,
+    width: Dp,
+    height: Dp,
+    modifier: Modifier = Modifier
+) {
+    if (coverUrl.isNullOrBlank()) {
+        RetroCartridgeThumbnail(
+            isCgb = isCgb,
+            title = title,
+            width = width,
+            height = height,
+            modifier = modifier
+        )
+    } else {
+        SubcomposeAsyncImage(
+            model = coverUrl,
+            contentDescription = "$title box art",
+            modifier = modifier
+                .size(width = width, height = height)
+                .clip(RoundedCornerShape(6.dp))
+                .border(1.dp, Color(0xFF2C313E), RoundedCornerShape(6.dp)),
+            contentScale = ContentScale.Crop,
+            loading = {
+                RetroCartridgeThumbnail(
+                    isCgb = isCgb,
+                    title = title,
+                    width = width,
+                    height = height
+                )
+            },
+            error = {
+                RetroCartridgeThumbnail(
+                    isCgb = isCgb,
+                    title = title,
+                    width = width,
+                    height = height
+                )
+            }
+        )
+    }
+}
+
+/**
  * Authentic miniature Game Boy cartridge illustration with custom label and top notch.
  */
 @Composable
@@ -492,7 +544,8 @@ private fun HeroResumeCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            RetroCartridgeThumbnail(
+            GameCoverArt(
+                coverUrl = game.coverUrl,
                 isCgb = game.isCgb,
                 title = game.title,
                 width = 54.dp,
@@ -596,7 +649,8 @@ private fun GameCardItem(
             .padding(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            RetroCartridgeThumbnail(
+            GameCoverArt(
+                coverUrl = game.coverUrl,
                 isCgb = game.isCgb,
                 title = game.title,
                 width = 46.dp,

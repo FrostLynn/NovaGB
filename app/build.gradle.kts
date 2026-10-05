@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.coil.compose)
 
     debugImplementation(libs.androidx.compose.ui.tooling.preview)
 }
