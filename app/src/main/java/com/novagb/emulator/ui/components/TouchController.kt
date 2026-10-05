@@ -421,7 +421,8 @@ private fun ClassicDmgActionButtons(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontStyle = FontStyle.Italic,
-                    color = Color(0xFF0F205A)
+                    color = Color(0xFF0F205A),
+                    modifier = Modifier.offset(x = 8.dp)
                 )
             }
 
@@ -442,7 +443,8 @@ private fun ClassicDmgActionButtons(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontStyle = FontStyle.Italic,
-                    color = Color(0xFF0F205A)
+                    color = Color(0xFF0F205A),
+                    modifier = Modifier.offset(x = 8.dp)
                 )
             }
         }
