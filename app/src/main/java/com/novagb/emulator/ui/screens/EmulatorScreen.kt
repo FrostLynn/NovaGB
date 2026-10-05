@@ -344,14 +344,13 @@ private fun QuickMenuSheetContent(
                         Text(
                             text = if (hasSlot) "Saved $timeStr" else "Empty",
                             fontSize = 10.sp,
-                            color = if (hasSlot) Color(0xFF00E5FF) else Color(0xFF6B7280)
+                            color = if (hasSlot) Color(0xFF00E5FF) else Color(0xFF8E95A5)
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            // SAVE BUTTON
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -375,7 +374,6 @@ private fun QuickMenuSheetContent(
                                 )
                             }
 
-                            // LOAD BUTTON
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -401,7 +399,7 @@ private fun QuickMenuSheetContent(
                                     text = "LOAD",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (hasSlot) Color(0xFF05FFA1) else Color(0xFF4F5668)
+                                    color = if (hasSlot) Color(0xFF05FFA1) else Color(0xFF6B7280)
                                 )
                             }
                         }
@@ -451,7 +449,6 @@ private fun QuickMenuSheetContent(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // 4 Color dots preview
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             pal.colors.forEach { c ->
                                 Box(

@@ -215,7 +215,6 @@ fun LibraryScreen(
                     )
                 }
 
-                // Filter & Sort Bar
                 item {
                     Row(
                         modifier = Modifier
@@ -224,7 +223,6 @@ fun LibraryScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Filter chips
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             LibraryFilter.entries.forEach { filter ->
                                 val isSelected = selectedFilter == filter
@@ -245,12 +243,11 @@ fun LibraryScreen(
                             }
                         }
 
-                        // Sort chips
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Sort:", fontSize = 10.sp, color = Color(0xFF6B7280))
+                            Text("Sort:", fontSize = 10.sp, color = Color(0xFF9DA3AF))
                             LibrarySort.entries.forEach { sort ->
                                 val isSelected = selectedSort == sort
                                 Box(
@@ -269,7 +266,7 @@ fun LibraryScreen(
                                         text = sort.label,
                                         fontSize = 10.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) Color(0xFF00E5FF) else Color(0xFF7A8090)
+                                        color = if (isSelected) Color(0xFF00E5FF) else Color(0xFF9DA3AF)
                                     )
                                 }
                             }
@@ -351,7 +348,6 @@ fun RetroCartridgeThumbnail(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Notch & Grip Grooves
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.75f)
@@ -362,7 +358,6 @@ fun RetroCartridgeThumbnail(
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // Cartridge Sticker Label
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

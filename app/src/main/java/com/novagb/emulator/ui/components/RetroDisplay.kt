@@ -96,7 +96,6 @@ fun RetroDisplay(
             modifier = Modifier.fillMaxWidth()
         ) {
             if (showRetroBezel) {
-                // Top retro header with classic dual color lines and branding
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -104,7 +103,6 @@ fun RetroDisplay(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Left decorative stripe
                     Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
@@ -134,7 +132,6 @@ fun RetroDisplay(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    // Right decorative stripe
                     Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
@@ -155,7 +152,6 @@ fun RetroDisplay(
                 Spacer(modifier = Modifier.height(6.dp))
             }
 
-            // Screen container row (with optional left Battery LED when bezel is active)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -181,12 +177,11 @@ fun RetroDisplay(
                             text = "BATTERY",
                             fontSize = 7.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF7A8092)
+                            color = Color(0xFFA0A6B8)
                         )
                     }
                 }
 
-                // Inner Canvas Viewport
                 Box(
                     modifier = Modifier
                         .weight(1f)

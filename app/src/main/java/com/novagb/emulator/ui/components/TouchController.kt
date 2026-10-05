@@ -96,7 +96,6 @@ fun TouchController(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Top Toolbar: Menu, Fast-Forward
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -116,7 +115,6 @@ fun TouchController(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Main controls row: D-Pad on Left, Action Buttons on Right
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -124,7 +122,6 @@ fun TouchController(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
-            // Modern Circular 8-Direction D-Pad with zero touch-slop latency
             ModernDPad(
                 onButtonChange = { btn, pressed ->
                     if (pressed) triggerHaptic()
@@ -132,7 +129,6 @@ fun TouchController(
                 }
             )
 
-            // Modern Action Buttons (A, B, Turbo A, Turbo B)
             ActionButtonsGroup(
                 onButtonChange = { btn, pressed ->
                     if (pressed) triggerHaptic()
@@ -141,7 +137,6 @@ fun TouchController(
             )
         }
 
-        // Bottom Center: SELECT & START (now support holding)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -226,7 +221,6 @@ private fun ModernDPad(
         val isLeft = JoypadButton.LEFT in activeDirections
         val isRight = JoypadButton.RIGHT in activeDirections
 
-        // Direction indicators
         Text(
             text = "▲",
             color = if (isUp) Color(0xFF00E5FF) else Color(0xFF8E95A5),
@@ -256,7 +250,6 @@ private fun ModernDPad(
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 10.dp)
         )
 
-        // Center hub
         Box(
             modifier = Modifier
                 .size(46.dp)
@@ -301,45 +294,41 @@ private fun ActionButtonsGroup(
         modifier = Modifier.size(170.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Turbo B Button (Top-Left of B)
         TurboActionButton(
             label = "TB",
             color = Color(0xFFFF2A6D),
             button = JoypadButton.B,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = 18.dp, y = 16.dp),
+                .offset(x = 14.dp, y = 10.dp),
             onButtonPulse = onButtonChange
         )
 
-        // Turbo A Button (Top-Right of A)
         TurboActionButton(
             label = "TA",
             color = Color(0xFF00E5FF),
             button = JoypadButton.A,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = (-16).dp, y = 4.dp),
+                .offset(x = (-14).dp, y = 0.dp),
             onButtonPulse = onButtonChange
         )
 
-        // B Button (Bottom-Left)
         CircularActionButton(
             label = "B",
             color = Color(0xFFFF2A6D),
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = 8.dp, y = (-12).dp),
+                .offset(x = 8.dp, y = (-10).dp),
             onPressChange = { onButtonChange(JoypadButton.B, it) }
         )
 
-        // A Button (Center-Right)
         CircularActionButton(
             label = "A",
             color = Color(0xFF00E5FF),
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .offset(x = (-6).dp, y = 14.dp),
+                .offset(x = (-6).dp, y = 16.dp),
             onPressChange = { onButtonChange(JoypadButton.A, it) }
         )
     }
@@ -410,9 +399,17 @@ private fun TurboActionButton(
         }
     }
 
+    val displayTextColor = if (isHolding) {
+        Color.Black
+    } else if (color == Color(0xFFFF2A6D)) {
+        Color(0xFFFF5C8A)
+    } else {
+        color
+    }
+
     Box(
         modifier = modifier
-            .size(42.dp)
+            .size(48.dp)
             .shadow(if (isHolding) 2.dp else 6.dp, CircleShape)
             .clip(CircleShape)
             .background(
@@ -421,7 +418,7 @@ private fun TurboActionButton(
             )
             .border(
                 1.5.dp,
-                if (isHolding) color else color.copy(alpha = 0.5f),
+                if (isHolding) color else color.copy(alpha = 0.6f),
                 CircleShape
             )
             .pointerInput(Unit) {
@@ -438,9 +435,9 @@ private fun TurboActionButton(
     ) {
         Text(
             text = label,
-            color = if (isHolding) Color.Black else color,
+            color = displayTextColor,
             fontWeight = FontWeight.Bold,
-            fontSize = 11.sp
+            fontSize = 12.sp
         )
     }
 }
