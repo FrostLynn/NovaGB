@@ -51,7 +51,11 @@ class Cpu(private val mmu: Mmu) {
         set(v) { h = (v ushr 8) and 0xFF; l = v and 0xFF }
 
     var ime: Boolean = false
-    var imePending: Boolean = false
+    var imeDelay: Int = 0
+    var imePending: Boolean
+        get() = imeDelay > 0
+        set(value) { imeDelay = if (value) 2 else 0 }
+    var haltBug: Boolean = false
     var halted: Boolean = false
     var stopped: Boolean = false
 
@@ -67,7 +71,8 @@ class Cpu(private val mmu: Mmu) {
         sp = 0xFFFE
         pc = 0x0100
         ime = false
-        imePending = false
+        imeDelay = 0
+        haltBug = false
         halted = false
         stopped = false
     }
@@ -77,7 +82,11 @@ class Cpu(private val mmu: Mmu) {
 
     private fun fetchByte(): Int {
         val v = readByte(pc)
-        pc = (pc + 1) and 0xFFFF
+        if (haltBug) {
+            haltBug = false
+        } else {
+            pc = (pc + 1) and 0xFFFF
+        }
         return v
     }
 
@@ -103,18 +112,22 @@ class Cpu(private val mmu: Mmu) {
     }
 
     fun step(): Int {
-        if (imePending) {
-            imePending = false
-            ime = true
-        }
-
         val intCycles = handleInterrupts()
         if (intCycles > 0) return intCycles
 
         if (halted) return 4
 
         val opcode = fetchByte()
-        return executeOpcode(opcode)
+        val cycles = executeOpcode(opcode)
+
+        if (imeDelay > 0) {
+            imeDelay--
+            if (imeDelay == 0) {
+                ime = true
+            }
+        }
+
+        return cycles
     }
 
     private fun handleInterrupts(): Int {
@@ -128,6 +141,7 @@ class Cpu(private val mmu: Mmu) {
         if (!ime) return 0
 
         ime = false
+        imeDelay = 0
 
         for (bit in 0..4) {
             val mask = 1 shl bit
@@ -311,7 +325,15 @@ class Cpu(private val mmu: Mmu) {
             0x73 -> { writeByte(hl, e); 8 }
             0x74 -> { writeByte(hl, h); 8 }
             0x75 -> { writeByte(hl, l); 8 }
-            0x76 -> { halted = true; 4 }
+            0x76 -> {
+                val pending = (mmu.readByte(0xFF0F) and mmu.readByte(0xFFFF) and 0x1F) != 0
+                if (!ime && pending) {
+                    haltBug = true
+                } else {
+                    halted = true
+                }
+                4
+            }
             0x77 -> { writeByte(hl, a); 8 }
 
             0x78 -> { a = b; 4 }
@@ -421,7 +443,7 @@ class Cpu(private val mmu: Mmu) {
             0xD6 -> { sub(fetchByte()); 8 }
             0xD7 -> { push(pc); pc = 0x0010; 16 }
             0xD8 -> { if (flagC) { pc = pop(); 20 } else 8 }
-            0xD9 -> { pc = pop(); ime = true; 16 }
+            0xD9 -> { pc = pop(); ime = true; imeDelay = 0; 16 }
             0xDA -> { val addr = fetchWord(); if (flagC) { pc = addr; 16 } else 12 }
             0xDB -> 4
             0xDC -> { val addr = fetchWord(); if (flagC) { push(pc); pc = addr; 24 } else 12 }
@@ -456,7 +478,7 @@ class Cpu(private val mmu: Mmu) {
             0xF0 -> { a = readByte(0xFF00 or fetchByte()); 12 }
             0xF1 -> { af = pop(); 12 }
             0xF2 -> { a = readByte(0xFF00 or c); 8 }
-            0xF3 -> { ime = false; 4 }
+            0xF3 -> { ime = false; imeDelay = 0; 4 }
             0xF4 -> 4
             0xF5 -> { push(af); 16 }
             0xF6 -> { orOp(fetchByte()); 8 }
@@ -471,7 +493,7 @@ class Cpu(private val mmu: Mmu) {
             }
             0xF9 -> { sp = hl; 8 }
             0xFA -> { a = readByte(fetchWord()); 16 }
-            0xFB -> { imePending = true; 4 }
+            0xFB -> { imeDelay = 2; 4 }
             0xFC -> 4
             0xFD -> 4
             0xFE -> { cp(fetchByte()); 8 }
