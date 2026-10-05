@@ -55,6 +55,7 @@ fun SettingsScreen(
     var showLcdGrid by remember { mutableStateOf(settings.showLcdGrid) }
     var showScanlines by remember { mutableStateOf(settings.showScanlines) }
     var showRetroBezel by remember { mutableStateOf(settings.showRetroBezel) }
+    var showClassicConsoleShell by remember { mutableStateOf(settings.showClassicConsoleShell) }
     var showFps by remember { mutableStateOf(settings.showFps) }
     var hapticsEnabled by remember { mutableStateOf(settings.hapticFeedbackEnabled) }
     var soundEnabled by remember { mutableStateOf(settings.soundEnabled) }
@@ -117,6 +118,16 @@ fun SettingsScreen(
                 onCheckedChange = {
                     showRetroBezel = it
                     settings.showRetroBezel = it
+                }
+            )
+
+            SettingsToggleItem(
+                title = "Classic DMG Console Shell",
+                subtitle = "Authentic light gray ABS body, cross D-Pad, magenta A/B buttons, and speaker grille",
+                checked = showClassicConsoleShell,
+                onCheckedChange = {
+                    showClassicConsoleShell = it
+                    settings.showClassicConsoleShell = it
                 }
             )
 

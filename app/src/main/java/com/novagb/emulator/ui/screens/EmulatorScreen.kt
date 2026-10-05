@@ -185,10 +185,12 @@ fun EmulatorScreen(
         }
     }
 
+    val isDmgShell = settings.showClassicConsoleShell
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0C0D10))
+            .background(if (isDmgShell) Color(0xFFC8CACC) else Color(0xFF0C0D10))
     ) {
         Column(
             modifier = Modifier
@@ -198,16 +200,25 @@ fun EmulatorScreen(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (isDmgShell) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(Color(0xFFB0B3BA))
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = if (isDmgShell) 6.dp else 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = game.title,
-                    color = Color(0xFFD0D5E0),
+                    color = if (isDmgShell) Color(0xFF1E2438) else Color(0xFFD0D5E0),
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     maxLines = 1
@@ -217,7 +228,7 @@ fun EmulatorScreen(
                     if (isFastForward) {
                         Text(
                             text = "${settings.fastForwardSpeed}X FAST",
-                            color = Color(0xFFFF2A6D),
+                            color = if (isDmgShell) Color(0xFF88153A) else Color(0xFFFF2A6D),
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(end = 8.dp)
@@ -226,8 +237,8 @@ fun EmulatorScreen(
                     if (settings.showFps) {
                         Text(
                             text = "$fpsDisplay FPS",
-                            color = Color(0xFF00E5FF),
-                            fontWeight = FontWeight.Medium,
+                            color = if (isDmgShell) Color(0xFF0F205A) else Color(0xFF00E5FF),
+                            fontWeight = FontWeight.Bold,
                             fontSize = 11.sp
                         )
                     }
@@ -240,6 +251,7 @@ fun EmulatorScreen(
                 showLcdGrid = settings.showLcdGrid,
                 showScanlines = settings.showScanlines,
                 showRetroBezel = settings.showRetroBezel,
+                classicDmgShell = isDmgShell,
                 modifier = Modifier.weight(1f, fill = false),
                 frameIndexProvider = { frameVersion.longValue }
             )
@@ -254,6 +266,7 @@ fun EmulatorScreen(
                 opacity = settings.buttonOpacity,
                 scaleFactor = settings.controllerScale,
                 hapticsEnabled = settings.hapticFeedbackEnabled,
+                classicDmgTheme = isDmgShell,
                 modifier = Modifier.fillMaxWidth()
             )
         }

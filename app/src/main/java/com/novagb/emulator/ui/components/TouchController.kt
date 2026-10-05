@@ -7,6 +7,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,8 +40,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,6 +66,7 @@ fun TouchController(
     opacity: Float = 0.7f,
     scaleFactor: Float = 1.0f,
     hapticsEnabled: Boolean = true,
+    classicDmgTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -93,7 +98,7 @@ fun TouchController(
             .fillMaxWidth()
             .scale(scaleFactor)
             .alpha(opacity)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Row(
@@ -101,63 +106,459 @@ fun TouchController(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PillButton(
-                text = "MENU",
-                onClick = { triggerHaptic(); onMenuClick() }
-            )
+            if (classicDmgTheme) {
+                ClassicDmgUtilityButton(
+                    text = "MENU",
+                    onClick = { triggerHaptic(); onMenuClick() }
+                )
 
-            PillButton(
-                text = if (isFastForwardActive) "2X TURBO" else "1X PLAY",
-                active = isFastForwardActive,
-                onClick = { triggerHaptic(); onFastForwardToggle() }
-            )
+                ClassicDmgUtilityButton(
+                    text = if (isFastForwardActive) "2X TURBO" else "1X PLAY",
+                    active = isFastForwardActive,
+                    onClick = { triggerHaptic(); onFastForwardToggle() }
+                )
+            } else {
+                PillButton(
+                    text = "MENU",
+                    onClick = { triggerHaptic(); onMenuClick() }
+                )
+
+                PillButton(
+                    text = if (isFastForwardActive) "2X TURBO" else "1X PLAY",
+                    active = isFastForwardActive,
+                    onClick = { triggerHaptic(); onFastForwardToggle() }
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
+                .padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
-            ModernDPad(
-                onButtonChange = { btn, pressed ->
-                    if (pressed) triggerHaptic()
-                    onButtonChange(btn, pressed)
-                }
-            )
+            if (classicDmgTheme) {
+                ClassicDmgDPad(
+                    onButtonChange = { btn, pressed ->
+                        if (pressed) triggerHaptic()
+                        onButtonChange(btn, pressed)
+                    }
+                )
 
-            ActionButtonsGroup(
-                onButtonChange = { btn, pressed ->
-                    if (pressed) triggerHaptic()
-                    onButtonChange(btn, pressed)
+                ClassicDmgActionButtons(
+                    onButtonChange = { btn, pressed ->
+                        if (pressed) triggerHaptic()
+                        onButtonChange(btn, pressed)
+                    }
+                )
+            } else {
+                ModernDPad(
+                    onButtonChange = { btn, pressed ->
+                        if (pressed) triggerHaptic()
+                        onButtonChange(btn, pressed)
+                    }
+                )
+
+                ActionButtonsGroup(
+                    onButtonChange = { btn, pressed ->
+                        if (pressed) triggerHaptic()
+                        onButtonChange(btn, pressed)
+                    }
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (classicDmgTheme) {
+                    ClassicDmgSelectStartButton(
+                        label = "SELECT",
+                        onPressChange = { pressed ->
+                            if (pressed) triggerHaptic()
+                            onButtonChange(JoypadButton.SELECT, pressed)
+                        }
+                    )
+                    Spacer(modifier = Modifier.width(36.dp))
+                    ClassicDmgSelectStartButton(
+                        label = "START",
+                        onPressChange = { pressed ->
+                            if (pressed) triggerHaptic()
+                            onButtonChange(JoypadButton.START, pressed)
+                        }
+                    )
+                } else {
+                    PillButton(
+                        text = "SELECT",
+                        onPressChange = { pressed ->
+                            if (pressed) triggerHaptic()
+                            onButtonChange(JoypadButton.SELECT, pressed)
+                        }
+                    )
+                    Spacer(modifier = Modifier.width(32.dp))
+                    PillButton(
+                        text = "START",
+                        onPressChange = { pressed ->
+                            if (pressed) triggerHaptic()
+                            onButtonChange(JoypadButton.START, pressed)
+                        }
+                    )
                 }
+            }
+
+            if (classicDmgTheme) {
+                ClassicDmgSpeakerGrille(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 4.dp, bottom = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClassicDmgUtilityButton(
+    text: String,
+    active: Boolean = false,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = if (active) Color(0xFF0F205A) else Color(0xFF565860),
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (active) Color(0xFF0F205A) else Color(0xFF3E4048)),
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Text(
+            text = text,
+            color = if (active) Color.White else Color(0xFFE2E4E8),
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            letterSpacing = 0.5.sp,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+        )
+    }
+}
+
+@Composable
+private fun ClassicDmgDPad(
+    onButtonChange: (JoypadButton, Boolean) -> Unit
+) {
+    var activeDirections by remember { mutableStateOf<Set<JoypadButton>>(emptySet()) }
+
+    Box(
+        modifier = Modifier
+            .size(160.dp)
+            .clip(CircleShape)
+            .background(Color(0xFFB8BAC0))
+            .border(2.dp, Color(0xFFA0A3AB), CircleShape)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+
+                    val updateDirections: (Float, Float) -> Unit = { px, py ->
+                        val newDirs = calculateDirections(px, py, size.width.toFloat(), size.height.toFloat())
+                        if (newDirs != activeDirections) {
+                            for (b in activeDirections - newDirs) {
+                                onButtonChange(b, false)
+                            }
+                            for (b in newDirs - activeDirections) {
+                                onButtonChange(b, true)
+                            }
+                            activeDirections = newDirs
+                        }
+                    }
+
+                    updateDirections(down.position.x, down.position.y)
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) {
+                            for (b in activeDirections) {
+                                onButtonChange(b, false)
+                            }
+                            activeDirections = emptySet()
+                            break
+                        }
+                        updateDirections(change.position.x, change.position.y)
+                        change.consume()
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        val isUp = JoypadButton.UP in activeDirections
+        val isDown = JoypadButton.DOWN in activeDirections
+        val isLeft = JoypadButton.LEFT in activeDirections
+        val isRight = JoypadButton.RIGHT in activeDirections
+
+        // Authentic Game Boy Black Cross Shape
+        Box(
+            modifier = Modifier
+                .width(136.dp)
+                .height(44.dp)
+                .shadow(4.dp, RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0xFF18191E))
+                .border(1.dp, Color(0xFF2E313A), RoundedCornerShape(4.dp))
+        )
+
+        Box(
+            modifier = Modifier
+                .width(44.dp)
+                .height(136.dp)
+                .shadow(4.dp, RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0xFF18191E))
+                .border(1.dp, Color(0xFF2E313A), RoundedCornerShape(4.dp))
+        )
+
+        Text(
+            text = "▲",
+            color = if (isUp) Color(0xFF00E5FF) else Color(0xFF3E414B),
+            fontSize = 14.sp,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp)
+        )
+        Text(
+            text = "▼",
+            color = if (isDown) Color(0xFF00E5FF) else Color(0xFF3E414B),
+            fontSize = 14.sp,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
+        )
+        Text(
+            text = "◀",
+            color = if (isLeft) Color(0xFF00E5FF) else Color(0xFF3E414B),
+            fontSize = 14.sp,
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp)
+        )
+        Text(
+            text = "▶",
+            color = if (isRight) Color(0xFF00E5FF) else Color(0xFF3E414B),
+            fontSize = 14.sp,
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
+        )
+
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF101114))
+                .border(1.5.dp, Color(0xFF282A33), CircleShape)
+        )
+    }
+}
+
+@Composable
+private fun ClassicDmgActionButtons(
+    onButtonChange: (JoypadButton, Boolean) -> Unit
+) {
+    Box(
+        modifier = Modifier.size(175.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(y = 10.dp)
+                .width(148.dp)
+                .height(72.dp)
+                .graphicsLayer(rotationZ = -26f)
+                .clip(RoundedCornerShape(36.dp))
+                .background(Color(0xFFB8BAC0))
+                .border(1.5.dp, Color(0xFFA0A3AB), RoundedCornerShape(36.dp))
+        )
+
+        TurboActionButton(
+            label = "TB",
+            color = Color(0xFF88153A),
+            button = JoypadButton.B,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = 10.dp, y = (-2).dp),
+            onButtonPulse = onButtonChange
+        )
+
+        TurboActionButton(
+            label = "TA",
+            color = Color(0xFF88153A),
+            button = JoypadButton.A,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = (-10).dp, y = (-8).dp),
+            onButtonPulse = onButtonChange
+        )
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = 14.dp, y = 8.dp)
+        ) {
+            DmgRoundButton(
+                label = "",
+                color = Color(0xFF9E1644),
+                onPressChange = { onButtonChange(JoypadButton.B, it) }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "B",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontStyle = FontStyle.Italic,
+                color = Color(0xFF0F205A)
             )
         }
 
-        Row(
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+                .align(Alignment.CenterEnd)
+                .offset(x = (-4).dp, y = (-6).dp)
         ) {
-            PillButton(
-                text = "SELECT",
-                onPressChange = { pressed ->
-                    if (pressed) triggerHaptic()
-                    onButtonChange(JoypadButton.SELECT, pressed)
-                }
+            DmgRoundButton(
+                label = "",
+                color = Color(0xFF9E1644),
+                onPressChange = { onButtonChange(JoypadButton.A, it) }
             )
-            Spacer(modifier = Modifier.width(32.dp))
-            PillButton(
-                text = "START",
-                onPressChange = { pressed ->
-                    if (pressed) triggerHaptic()
-                    onButtonChange(JoypadButton.START, pressed)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "A",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontStyle = FontStyle.Italic,
+                color = Color(0xFF0F205A)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DmgRoundButton(
+    label: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onPressChange: (Boolean) -> Unit
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .size(52.dp)
+            .shadow(if (isPressed) 2.dp else 6.dp, CircleShape)
+            .clip(CircleShape)
+            .background(
+                Brush.verticalGradient(
+                    colors = if (isPressed) {
+                        listOf(Color(0xFF720B2E), Color(0xFF5A0824))
+                    } else {
+                        listOf(Color(0xFFB51D51), Color(0xFF8A1039))
+                    }
+                )
+            )
+            .border(
+                1.5.dp,
+                if (isPressed) Color(0xFF5A0824) else Color(0xFF6E0A2C),
+                CircleShape
+            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        isPressed = true
+                        onPressChange(true)
+                        tryAwaitRelease()
+                        isPressed = false
+                        onPressChange(false)
+                    }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        if (label.isNotEmpty()) {
+            Text(text = label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+    }
+}
+
+@Composable
+private fun ClassicDmgSelectStartButton(
+    label: String,
+    onPressChange: (Boolean) -> Unit
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(64.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(48.dp)
+                .height(16.dp)
+                .graphicsLayer(rotationZ = -26f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(
+                    if (isPressed) Color(0xFF383A42)
+                    else Color(0xFF5A5C64)
+                )
+                .border(
+                    1.dp,
+                    if (isPressed) Color(0xFF28292E) else Color(0xFF42444C),
+                    RoundedCornerShape(8.dp)
+                )
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            onPressChange(true)
+                            tryAwaitRelease()
+                            isPressed = false
+                            onPressChange(false)
+                        }
+                    )
                 }
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.ExtraBold,
+            fontStyle = FontStyle.Italic,
+            color = Color(0xFF0F205A),
+            letterSpacing = 0.5.sp
+        )
+    }
+}
+
+@Composable
+fun ClassicDmgSpeakerGrille(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val heights = listOf(18.dp, 24.dp, 30.dp, 30.dp, 24.dp, 18.dp)
+        heights.forEach { h ->
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(h)
+                    .graphicsLayer(rotationZ = -28f)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0xFF282B33))
             )
         }
     }

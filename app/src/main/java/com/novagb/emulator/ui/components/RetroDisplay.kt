@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -50,6 +51,7 @@ fun RetroDisplay(
     showLcdGrid: Boolean,
     showScanlines: Boolean,
     showRetroBezel: Boolean = true,
+    classicDmgShell: Boolean = false,
     modifier: Modifier = Modifier,
     frameIndexProvider: () -> Long = { 0L }
 ) {
@@ -77,15 +79,18 @@ fun RetroDisplay(
 
     val outerShape = RoundedCornerShape(16.dp)
 
+    val bezelBgColor = if (classicDmgShell) Color(0xFF525660) else if (showRetroBezel) Color(0xFF262933) else Color(0xFF14161B)
+    val bezelBorderColor = if (classicDmgShell) Color(0xFF3C3E46) else if (showRetroBezel) Color(0xFF383D4C) else Color(0xFF262A36)
+
     Box(
         modifier = modifier
             .padding(horizontal = 14.dp, vertical = 6.dp)
-            .shadow(16.dp, outerShape)
+            .shadow(if (classicDmgShell) 6.dp else 16.dp, outerShape)
             .clip(outerShape)
-            .background(if (showRetroBezel) Color(0xFF262933) else Color(0xFF14161B))
+            .background(bezelBgColor)
             .border(
                 if (showRetroBezel) 2.dp else 1.dp,
-                if (showRetroBezel) Color(0xFF383D4C) else Color(0xFF262A36),
+                bezelBorderColor,
                 outerShape
             )
             .padding(if (showRetroBezel) 10.dp else 6.dp),
@@ -266,6 +271,49 @@ fun RetroDisplay(
                             }
                         }
                     }
+                }
+            }
+
+            if (showRetroBezel) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(3.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (classicDmgShell) Color(0xFF102055) else Color(0xFF8E95A5).copy(alpha = 0.6f)
+                        ),
+                        color = Color.Transparent
+                    ) {
+                        Text(
+                            text = "Nintendo",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (classicDmgShell) Color(0xFF102055) else Color(0xFFD0D5E0),
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "GAME BOY",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontStyle = FontStyle.Italic,
+                        color = if (classicDmgShell) Color(0xFF102055) else Color(0xFFD0D5E0),
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        text = "™",
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontStyle = FontStyle.Italic,
+                        color = if (classicDmgShell) Color(0xFF102055) else Color(0xFFD0D5E0)
+                    )
                 }
             }
         }

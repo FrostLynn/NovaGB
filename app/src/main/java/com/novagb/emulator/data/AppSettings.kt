@@ -62,6 +62,10 @@ class AppSettings(context: Context) {
         get() = prefs.getBoolean("show_retro_bezel", true)
         set(value) = prefs.edit().putBoolean("show_retro_bezel", value).apply()
 
+    var showClassicConsoleShell: Boolean
+        get() = prefs.getBoolean("show_classic_console_shell", true)
+        set(value) = prefs.edit().putBoolean("show_classic_console_shell", value).apply()
+
     var showFps: Boolean
         get() = prefs.getBoolean("show_fps", true)
         set(value) = prefs.edit().putBoolean("show_fps", value).apply()
