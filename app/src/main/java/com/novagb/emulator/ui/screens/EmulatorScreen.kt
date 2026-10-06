@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,10 +22,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -49,7 +53,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novagb.emulator.audio.GbAudioPlayer
 import com.novagb.emulator.core.GameBoy
-import com.novagb.emulator.core.JoypadButton
 import com.novagb.emulator.data.AppSettings
 import com.novagb.emulator.data.ColorPalette
 import com.novagb.emulator.data.EmulatorLogger
@@ -57,6 +60,25 @@ import com.novagb.emulator.data.RomMetadata
 import com.novagb.emulator.data.RomRepository
 import com.novagb.emulator.ui.components.RetroDisplay
 import com.novagb.emulator.ui.components.TouchController
+import com.novagb.emulator.ui.theme.AccentDanger
+import com.novagb.emulator.ui.theme.AccentPrimary
+import com.novagb.emulator.ui.theme.AccentSecondary
+import com.novagb.emulator.ui.theme.AccentSuccess
+import com.novagb.emulator.ui.theme.DarkBackground
+import com.novagb.emulator.ui.theme.DarkBorder
+import com.novagb.emulator.ui.theme.DarkBorderSubtle
+import com.novagb.emulator.ui.theme.DarkSurface
+import com.novagb.emulator.ui.theme.DarkSurfaceSubtle
+import com.novagb.emulator.ui.theme.DarkSurfaceVariant
+import com.novagb.emulator.ui.theme.DmgMagentaButton
+import com.novagb.emulator.ui.theme.DmgShellBody
+import com.novagb.emulator.ui.theme.DmgTextBlue
+import com.novagb.emulator.ui.theme.SlotActiveLoadBg
+import com.novagb.emulator.ui.theme.SlotDangerBg
+import com.novagb.emulator.ui.theme.SlotSuccessBg
+import com.novagb.emulator.ui.theme.TextMuted
+import com.novagb.emulator.ui.theme.TextPrimary
+import com.novagb.emulator.ui.theme.TextSecondary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -167,7 +189,6 @@ fun EmulatorScreen(
                 val diffNs = nextFrameTimeNs - nowNs
 
                 if (diffNs > 2_500_000L) {
-                    // Sleep coarse milliseconds, leaving headroom for fine-tuned precision yield
                     val sleepMs = (diffNs / 1_000_000L) - 1
                     delay(sleepMs)
                     while (System.nanoTime() < nextFrameTimeNs && isActive) {
@@ -178,7 +199,6 @@ fun EmulatorScreen(
                         Thread.yield()
                     }
                 } else if (diffNs < -50_000_000L) {
-                    // Reset timing anchor if fallen more than 3 frames behind (e.g. app paused)
                     nextFrameTimeNs = System.nanoTime()
                 }
             }
@@ -190,7 +210,7 @@ fun EmulatorScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(if (isDmgShell) Color(0xFFC8CACC) else Color(0xFF0C0D10))
+            .background(if (isDmgShell) DmgShellBody else DarkBackground)
     ) {
         Column(
             modifier = Modifier
@@ -205,7 +225,7 @@ fun EmulatorScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp)
-                        .background(Color(0xFFB0B3BA))
+                        .background(DarkBorder)
                 )
             }
 
@@ -218,7 +238,7 @@ fun EmulatorScreen(
             ) {
                 Text(
                     text = game.title,
-                    color = if (isDmgShell) Color(0xFF1E2438) else Color(0xFFD0D5E0),
+                    color = if (isDmgShell) DmgTextBlue else TextPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     maxLines = 1
@@ -226,21 +246,34 @@ fun EmulatorScreen(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (isFastForward) {
-                        Text(
-                            text = "${settings.fastForwardSpeed}X FAST",
-                            color = if (isDmgShell) Color(0xFF88153A) else Color(0xFFFF2A6D),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = if (isDmgShell) DmgMagentaButton else AccentSecondary,
                             modifier = Modifier.padding(end = 8.dp)
-                        )
+                        ) {
+                            Text(
+                                text = "${settings.fastForwardSpeed}X TURBO",
+                                color = if (isDmgShell) Color.White else Color.Black,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                     if (settings.showFps) {
-                        Text(
-                            text = "$fpsDisplay FPS",
-                            color = if (isDmgShell) Color(0xFF0F205A) else Color(0xFF00E5FF),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = if (isDmgShell) DmgTextBlue else DarkSurfaceVariant,
+                            border = if (!isDmgShell) androidx.compose.foundation.BorderStroke(0.5.dp, DarkBorder) else null
+                        ) {
+                            Text(
+                                text = "$fpsDisplay FPS",
+                                color = if (isDmgShell) Color.White else AccentPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -275,7 +308,7 @@ fun EmulatorScreen(
             ModalBottomSheet(
                 onDismissRequest = { showQuickMenu = false },
                 sheetState = sheetState,
-                containerColor = Color(0xFF16181F)
+                containerColor = DarkSurface
             ) {
                 QuickMenuSheetContent(
                     game = game,
@@ -302,19 +335,19 @@ fun EmulatorScreen(
             AlertDialog(
                 onDismissRequest = { emulationCrashError = null },
                 title = {
-                    Text("Emulation Error", fontWeight = FontWeight.Bold, color = Color(0xFFFF5252))
+                    Text("Emulation Error", fontWeight = FontWeight.Bold, color = AccentDanger)
                 },
                 text = {
                     Column {
                         Text(
                             text = "A core emulation exception occurred:\n$emulationCrashError",
-                            color = Color.White,
+                            color = TextPrimary,
                             fontSize = 13.sp
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = "Detailed CPU, PPU, and stack trace dumps have been captured.",
-                            color = Color(0xFF8E95A5),
+                            color = TextMuted,
                             fontSize = 12.sp
                         )
                     }
@@ -329,7 +362,7 @@ fun EmulatorScreen(
                                 Toast.LENGTH_SHORT
                             ).show()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF))
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary)
                     ) {
                         Text("Copy Logs", color = Color.Black, fontWeight = FontWeight.Bold)
                     }
@@ -345,10 +378,11 @@ fun EmulatorScreen(
                             ).show()
                         }
                     ) {
-                        Text("Export File", color = Color.White)
+                        Text("Export File", color = TextPrimary)
                     }
                 },
-                containerColor = Color(0xFF1E212B)
+                containerColor = DarkSurface,
+                shape = RoundedCornerShape(16.dp)
             )
         }
     }
@@ -366,6 +400,7 @@ private fun QuickMenuSheetContent(
 ) {
     var saveStatusMsg by remember { mutableStateOf("") }
     var stateUpdateTrigger by remember { mutableIntStateOf(0) }
+    var showResetConfirm by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     Column(
@@ -373,21 +408,35 @@ private fun QuickMenuSheetContent(
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
-        Text(
-            text = "QUICK MENU",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF00E5FF),
-            letterSpacing = 1.sp
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "QUICK MENU",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentPrimary,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = game.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+            }
+        }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "Save State Slots",
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White
+            color = TextPrimary
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -408,10 +457,12 @@ private fun QuickMenuSheetContent(
 
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFF1E212A),
-                    modifier = Modifier
-                        .weight(1f)
-                        .border(1.dp, if (hasSlot) Color(0xFF384052) else Color(0xFF282C38), RoundedCornerShape(12.dp))
+                    color = DarkSurfaceVariant,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (hasSlot) DarkBorder else DarkBorderSubtle
+                    ),
+                    modifier = Modifier.weight(1f)
                 ) {
                     Column(
                         modifier = Modifier.padding(10.dp),
@@ -421,13 +472,13 @@ private fun QuickMenuSheetContent(
                             text = "Slot $slot",
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
-                            color = Color.White
+                            color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = if (hasSlot) "Saved $timeStr" else "Empty",
                             fontSize = 10.sp,
-                            color = if (hasSlot) Color(0xFF00E5FF) else Color(0xFF8E95A5)
+                            color = if (hasSlot) AccentSuccess else TextMuted
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(
@@ -437,9 +488,10 @@ private fun QuickMenuSheetContent(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
+                                    .heightIn(min = 36.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFF282D3A))
-                                    .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                    .background(DarkSurfaceSubtle)
+                                    .border(1.dp, AccentPrimary.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
                                     .clickable {
                                         val stateData = gameBoy.saveState()
                                         repository.saveStateSlot(game.title, slot, stateData)
@@ -453,18 +505,19 @@ private fun QuickMenuSheetContent(
                                     text = "SAVE",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF00E5FF)
+                                    color = AccentPrimary
                                 )
                             }
 
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
+                                    .heightIn(min = 36.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (hasSlot) Color(0xFF1A3328) else Color(0xFF16181F))
+                                    .background(if (hasSlot) SlotActiveLoadBg else DarkSurfaceSubtle)
                                     .border(
                                         1.dp,
-                                        if (hasSlot) Color(0xFF05FFA1).copy(alpha = 0.6f) else Color(0xFF2E3342),
+                                        if (hasSlot) AccentSuccess.copy(alpha = 0.7f) else DarkBorderSubtle,
                                         RoundedCornerShape(6.dp)
                                     )
                                     .clickable(enabled = hasSlot) {
@@ -482,7 +535,7 @@ private fun QuickMenuSheetContent(
                                     text = "LOAD",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (hasSlot) Color(0xFF05FFA1) else Color(0xFF6B7280)
+                                    color = if (hasSlot) AccentSuccess else TextMuted
                                 )
                             }
                         }
@@ -492,13 +545,30 @@ private fun QuickMenuSheetContent(
         }
 
         if (saveStatusMsg.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = saveStatusMsg,
-                color = Color(0xFF05FFA1),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SlotSuccessBg)
+                    .border(1.dp, AccentSuccess.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = AccentSuccess,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = saveStatusMsg,
+                    color = AccentSuccess,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -507,7 +577,7 @@ private fun QuickMenuSheetContent(
             text = "Color Palette",
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White
+            color = TextPrimary
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -519,14 +589,12 @@ private fun QuickMenuSheetContent(
                 val isSelected = settings.selectedPalette == pal
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = if (isSelected) Color(0xFF222B38) else Color(0xFF1B1D24),
-                    modifier = Modifier
-                        .border(
-                            1.5.dp,
-                            if (isSelected) Color(0xFF00E5FF) else Color(0xFF2A2E3B),
-                            RoundedCornerShape(10.dp)
-                        )
-                        .clickable { onPaletteChanged(pal) }
+                    color = if (isSelected) DarkSurfaceVariant else DarkSurfaceSubtle,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.5.dp,
+                        if (isSelected) AccentPrimary else DarkBorderSubtle
+                    ),
+                    modifier = Modifier.clickable { onPaletteChanged(pal) }
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -547,7 +615,7 @@ private fun QuickMenuSheetContent(
                             text = pal.displayName,
                             fontSize = 11.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) Color(0xFF00E5FF) else Color(0xFFD0D5E0)
+                            color = if (isSelected) AccentPrimary else TextSecondary
                         )
                     }
                 }
@@ -560,7 +628,7 @@ private fun QuickMenuSheetContent(
             text = "Diagnostics & Logs",
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White
+            color = TextPrimary
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -570,9 +638,11 @@ private fun QuickMenuSheetContent(
         ) {
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = Color(0xFF182230),
+                color = DarkSurfaceVariant,
+                border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorderSubtle),
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = 44.dp)
                     .clickable {
                         val success = EmulatorLogger.copyToClipboard(context)
                         saveStatusMsg = if (success) "Logs copied to clipboard!" else "Failed to copy logs"
@@ -584,7 +654,7 @@ private fun QuickMenuSheetContent(
                 ) {
                     Text(
                         text = "Copy Logs",
-                        color = Color(0xFF00E5FF),
+                        color = AccentPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
@@ -593,9 +663,11 @@ private fun QuickMenuSheetContent(
 
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = Color(0xFF182230),
+                color = DarkSurfaceVariant,
+                border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorderSubtle),
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = 44.dp)
                     .clickable {
                         val file = EmulatorLogger.exportToFile(context)
                         saveStatusMsg = if (file != null) "Saved to ${file.name}!" else "Failed to save file"
@@ -607,7 +679,7 @@ private fun QuickMenuSheetContent(
                 ) {
                     Text(
                         text = "Save Log File",
-                        color = Color(0xFF00E5FF),
+                        color = AccentPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
@@ -623,10 +695,12 @@ private fun QuickMenuSheetContent(
         ) {
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = Color(0xFF2D2024),
+                color = SlotDangerBg,
+                border = androidx.compose.foundation.BorderStroke(1.dp, AccentDanger.copy(alpha = 0.5f)),
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { onReset() }
+                    .heightIn(min = 48.dp)
+                    .clickable { showResetConfirm = true }
             ) {
                 Box(
                     modifier = Modifier.padding(12.dp),
@@ -634,7 +708,7 @@ private fun QuickMenuSheetContent(
                 ) {
                     Text(
                         text = "Reset Game",
-                        color = Color(0xFFFF5252),
+                        color = AccentDanger,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -643,9 +717,11 @@ private fun QuickMenuSheetContent(
 
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = Color(0xFF222632),
+                color = DarkSurfaceVariant,
+                border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
                 modifier = Modifier
                     .weight(1f)
+                    .heightIn(min = 48.dp)
                     .clickable { onExit() }
             ) {
                 Box(
@@ -654,7 +730,7 @@ private fun QuickMenuSheetContent(
                 ) {
                     Text(
                         text = "Exit to Library",
-                        color = Color.White,
+                        color = TextPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -663,5 +739,43 @@ private fun QuickMenuSheetContent(
         }
 
         Spacer(modifier = Modifier.height(20.dp))
+    }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = {
+                Text("Reset Emulation?", fontWeight = FontWeight.Bold, color = TextPrimary)
+            },
+            text = {
+                Text(
+                    "Any unsaved progress in this session will be lost. Do you want to restart the Game Boy core?",
+                    color = TextSecondary,
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showResetConfirm = false
+                        onReset()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentDanger),
+                    modifier = Modifier.heightIn(min = 44.dp)
+                ) {
+                    Text("Reset Game", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showResetConfirm = false },
+                    modifier = Modifier.heightIn(min = 44.dp)
+                ) {
+                    Text("Cancel", color = TextPrimary)
+                }
+            },
+            containerColor = DarkSurface,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
