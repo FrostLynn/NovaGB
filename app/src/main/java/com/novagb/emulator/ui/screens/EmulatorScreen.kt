@@ -1,6 +1,7 @@
 package com.novagb.emulator.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,6 +44,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -80,6 +83,8 @@ fun EmulatorScreen(
 
     var isFastForward by remember { mutableStateOf(false) }
     var showQuickMenu by remember { mutableStateOf(false) }
+    var isEditingControllerLayout by remember { mutableStateOf(false) }
+    var layoutUpdateTrigger by remember { mutableIntStateOf(0) }
     var fpsDisplay by remember { mutableIntStateOf(60) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -256,6 +261,8 @@ fun EmulatorScreen(
                 frameIndexProvider = { frameVersion.longValue }
             )
 
+            @Suppress("UNUSED_VARIABLE")
+            val trigger = layoutUpdateTrigger
             TouchController(
                 onButtonChange = { btn, pressed ->
                     gameBoy.setButton(btn, pressed)
@@ -267,6 +274,50 @@ fun EmulatorScreen(
                 scaleFactor = settings.controllerScale,
                 hapticsEnabled = settings.hapticFeedbackEnabled,
                 classicDmgTheme = isDmgShell,
+                isEditingLayout = isEditingControllerLayout,
+                dpadOffsetX = settings.dpadOffsetX,
+                dpadOffsetY = settings.dpadOffsetY,
+                dpadScale = settings.dpadScale,
+                actionOffsetX = settings.actionOffsetX,
+                actionOffsetY = settings.actionOffsetY,
+                actionScale = settings.actionScale,
+                selectStartOffsetX = settings.selectStartOffsetX,
+                selectStartOffsetY = settings.selectStartOffsetY,
+                selectStartScale = settings.selectStartScale,
+                onDpadDrag = { dx, dy ->
+                    settings.dpadOffsetX = (settings.dpadOffsetX + dx).coerceIn(-100f, 100f)
+                    settings.dpadOffsetY = (settings.dpadOffsetY + dy).coerceIn(-120f, 120f)
+                    layoutUpdateTrigger++
+                },
+                onActionDrag = { dx, dy ->
+                    settings.actionOffsetX = (settings.actionOffsetX + dx).coerceIn(-100f, 100f)
+                    settings.actionOffsetY = (settings.actionOffsetY + dy).coerceIn(-120f, 120f)
+                    layoutUpdateTrigger++
+                },
+                onSelectStartDrag = { dx, dy ->
+                    settings.selectStartOffsetX = (settings.selectStartOffsetX + dx).coerceIn(-80f, 80f)
+                    settings.selectStartOffsetY = (settings.selectStartOffsetY + dy).coerceIn(-60f, 60f)
+                    layoutUpdateTrigger++
+                },
+                onDpadScaleChange = { s ->
+                    settings.dpadScale = s
+                    layoutUpdateTrigger++
+                },
+                onActionScaleChange = { s ->
+                    settings.actionScale = s
+                    layoutUpdateTrigger++
+                },
+                onSelectStartScaleChange = { s ->
+                    settings.selectStartScale = s
+                    layoutUpdateTrigger++
+                },
+                onResetLayout = {
+                    settings.resetControllerLayout()
+                    layoutUpdateTrigger++
+                },
+                onFinishEditingLayout = {
+                    isEditingControllerLayout = false
+                },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -285,6 +336,10 @@ fun EmulatorScreen(
                     onPaletteChanged = { palette ->
                         settings.selectedPalette = palette
                         gameBoy.ppu.paletteColors = palette.colors
+                    },
+                    onCustomizeLayout = {
+                        showQuickMenu = false
+                        isEditingControllerLayout = true
                     },
                     onReset = {
                         gameBoy.reset()
@@ -361,6 +416,7 @@ private fun QuickMenuSheetContent(
     gameBoy: GameBoy,
     settings: AppSettings,
     onPaletteChanged: (ColorPalette) -> Unit,
+    onCustomizeLayout: () -> Unit,
     onReset: () -> Unit,
     onExit: () -> Unit
 ) {
@@ -401,6 +457,9 @@ private fun QuickMenuSheetContent(
                 val lastSaved = remember(slot, stateUpdateTrigger) {
                     repository.getStateSlotLastModified(game.title, slot)
                 }
+                val thumbnail = remember(slot, stateUpdateTrigger) {
+                    repository.loadStateThumbnail(game.title, slot)
+                }
                 val hasSlot = lastSaved > 0L
                 val timeStr = if (hasSlot) {
                     SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(lastSaved))
@@ -414,22 +473,51 @@ private fun QuickMenuSheetContent(
                         .border(1.dp, if (hasSlot) Color(0xFF384052) else Color(0xFF282C38), RoundedCornerShape(12.dp))
                 ) {
                     Column(
-                        modifier = Modifier.padding(10.dp),
+                        modifier = Modifier.padding(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             text = "Slot $slot",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = if (hasSlot) "Saved $timeStr" else "Empty",
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             color = if (hasSlot) Color(0xFF00E5FF) else Color(0xFF8E95A5)
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFF14161E))
+                                .border(1.dp, Color(0xFF282C38), RoundedCornerShape(6.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (thumbnail != null) {
+                                Image(
+                                    bitmap = thumbnail.asImageBitmap(),
+                                    contentDescription = "Slot $slot Screenshot",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Text(
+                                    text = "NO CAPTURE",
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF6B7280)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -443,6 +531,7 @@ private fun QuickMenuSheetContent(
                                     .clickable {
                                         val stateData = gameBoy.saveState()
                                         repository.saveStateSlot(game.title, slot, stateData)
+                                        repository.saveStateThumbnail(game.title, slot, gameBoy.ppu.framebuffer)
                                         stateUpdateTrigger++
                                         saveStatusMsg = "Saved to Slot $slot!"
                                     }
@@ -551,6 +640,57 @@ private fun QuickMenuSheetContent(
                         )
                     }
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Controller & Layout",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = Color(0xFF182230),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.4f)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCustomizeLayout() }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Edit On-Screen Controls",
+                        color = Color(0xFF00E5FF),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Drag buttons to reposition & adjust sizes",
+                        color = Color(0xFF8E95A5),
+                        fontSize = 11.sp
+                    )
+                }
+                Text(
+                    text = "EDIT",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .background(Color(0xFF00E5FF), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                )
             }
         }
 

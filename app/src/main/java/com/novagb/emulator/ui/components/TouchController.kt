@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,6 +54,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.atan2
 import kotlin.math.sqrt
+
+enum class EditableCluster {
+    DPAD,
+    ACTIONS,
+    SELECT_START
+}
 
 /**
  * Modern semi-transparent frosted glass touch controller with tactile haptic feedback,
@@ -67,9 +75,30 @@ fun TouchController(
     scaleFactor: Float = 1.0f,
     hapticsEnabled: Boolean = true,
     classicDmgTheme: Boolean = false,
+    isEditingLayout: Boolean = false,
+    dpadOffsetX: Float = 0f,
+    dpadOffsetY: Float = 0f,
+    dpadScale: Float = 1f,
+    actionOffsetX: Float = 0f,
+    actionOffsetY: Float = 0f,
+    actionScale: Float = 1f,
+    selectStartOffsetX: Float = 0f,
+    selectStartOffsetY: Float = 0f,
+    selectStartScale: Float = 1f,
+    onDpadDrag: ((Float, Float) -> Unit)? = null,
+    onActionDrag: ((Float, Float) -> Unit)? = null,
+    onSelectStartDrag: ((Float, Float) -> Unit)? = null,
+    onDpadScaleChange: ((Float) -> Unit)? = null,
+    onActionScaleChange: ((Float) -> Unit)? = null,
+    onSelectStartScaleChange: ((Float) -> Unit)? = null,
+    onResetLayout: (() -> Unit)? = null,
+    onFinishEditingLayout: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current.density
+    var selectedCluster by remember { mutableStateOf(EditableCluster.DPAD) }
+
     val vibrator = remember(context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
@@ -81,7 +110,7 @@ fun TouchController(
     }
 
     val triggerHaptic = {
-        if (hapticsEnabled) {
+        if (hapticsEnabled && !isEditingLayout) {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
@@ -97,37 +126,195 @@ fun TouchController(
         modifier = modifier
             .fillMaxWidth()
             .scale(scaleFactor)
-            .alpha(opacity)
+            .alpha(if (isEditingLayout) 1.0f else opacity)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (classicDmgTheme) {
-                ClassicDmgUtilityButton(
-                    text = "MENU",
-                    onClick = { triggerHaptic(); onMenuClick() }
-                )
+        if (isEditingLayout) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (classicDmgTheme) Color(0xFFD4D6D9) else Color(0xFF161822),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.5.dp,
+                    if (classicDmgTheme) Color(0xFF0F205A) else Color(0xFF00E5FF)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "LAYOUT EDITOR",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (classicDmgTheme) Color(0xFF0F205A) else Color(0xFF00E5FF),
+                            letterSpacing = 0.5.sp
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (classicDmgTheme) Color(0xFF88153A) else Color(0xFF2E1A24),
+                                modifier = Modifier.clickable { onResetLayout?.invoke() }
+                            ) {
+                                Text(
+                                    text = "Reset",
+                                    color = if (classicDmgTheme) Color.White else Color(0xFFFF5C8A),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (classicDmgTheme) Color(0xFF0F205A) else Color(0xFF00E5FF),
+                                modifier = Modifier.clickable { onFinishEditingLayout?.invoke() }
+                            ) {
+                                Text(
+                                    text = "Done",
+                                    color = if (classicDmgTheme) Color.White else Color.Black,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
 
-                ClassicDmgUtilityButton(
-                    text = if (isFastForwardActive) "2X TURBO" else "1X PLAY",
-                    active = isFastForwardActive,
-                    onClick = { triggerHaptic(); onFastForwardToggle() }
-                )
-            } else {
-                PillButton(
-                    text = "MENU",
-                    onClick = { triggerHaptic(); onMenuClick() }
-                )
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                PillButton(
-                    text = if (isFastForwardActive) "2X TURBO" else "1X PLAY",
-                    active = isFastForwardActive,
-                    onClick = { triggerHaptic(); onFastForwardToggle() }
-                )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(
+                                EditableCluster.DPAD to "D-Pad",
+                                EditableCluster.ACTIONS to "A/B",
+                                EditableCluster.SELECT_START to "Start"
+                            ).forEach { (cluster, title) ->
+                                val isSel = selectedCluster == cluster
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isSel) {
+                                        if (classicDmgTheme) Color(0xFF0F205A) else Color(0xFF00E5FF)
+                                    } else {
+                                        if (classicDmgTheme) Color(0xFFB8BAC0) else Color(0xFF222632)
+                                    },
+                                    modifier = Modifier.clickable { selectedCluster = cluster }
+                                ) {
+                                    Text(
+                                        text = title,
+                                        color = if (isSel) {
+                                            if (classicDmgTheme) Color.White else Color.Black
+                                        } else {
+                                            if (classicDmgTheme) Color(0xFF383A42) else Color(0xFF8E95A5)
+                                        },
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        val currentScale = when (selectedCluster) {
+                            EditableCluster.DPAD -> dpadScale
+                            EditableCluster.ACTIONS -> actionScale
+                            EditableCluster.SELECT_START -> selectStartScale
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = if (classicDmgTheme) Color(0xFFB8BAC0) else Color(0xFF2A2E3B),
+                                modifier = Modifier.clickable {
+                                    val nextScale = (currentScale - 0.05f).coerceIn(0.75f, 1.35f)
+                                    when (selectedCluster) {
+                                        EditableCluster.DPAD -> onDpadScaleChange?.invoke(nextScale)
+                                        EditableCluster.ACTIONS -> onActionScaleChange?.invoke(nextScale)
+                                        EditableCluster.SELECT_START -> onSelectStartScaleChange?.invoke(nextScale)
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = " - ",
+                                    color = if (classicDmgTheme) Color.Black else Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Text(
+                                text = "${(currentScale * 100).toInt()}%",
+                                color = if (classicDmgTheme) Color(0xFF0F205A) else Color(0xFFD0D5E0),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 2.dp)
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = if (classicDmgTheme) Color(0xFFB8BAC0) else Color(0xFF2A2E3B),
+                                modifier = Modifier.clickable {
+                                    val nextScale = (currentScale + 0.05f).coerceIn(0.75f, 1.35f)
+                                    when (selectedCluster) {
+                                        EditableCluster.DPAD -> onDpadScaleChange?.invoke(nextScale)
+                                        EditableCluster.ACTIONS -> onActionScaleChange?.invoke(nextScale)
+                                        EditableCluster.SELECT_START -> onSelectStartScaleChange?.invoke(nextScale)
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = " + ",
+                                    color = if (classicDmgTheme) Color.Black else Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (classicDmgTheme) {
+                    ClassicDmgUtilityButton(
+                        text = "MENU",
+                        onClick = { triggerHaptic(); onMenuClick() }
+                    )
+
+                    ClassicDmgUtilityButton(
+                        text = if (isFastForwardActive) "2X TURBO" else "1X PLAY",
+                        active = isFastForwardActive,
+                        onClick = { triggerHaptic(); onFastForwardToggle() }
+                    )
+                } else {
+                    PillButton(
+                        text = "MENU",
+                        onClick = { triggerHaptic(); onMenuClick() }
+                    )
+
+                    PillButton(
+                        text = if (isFastForwardActive) "2X TURBO" else "1X PLAY",
+                        active = isFastForwardActive,
+                        onClick = { triggerHaptic(); onFastForwardToggle() }
+                    )
+                }
             }
         }
 
@@ -140,34 +327,106 @@ fun TouchController(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (classicDmgTheme) {
-                ClassicDmgDPad(
-                    onButtonChange = { btn, pressed ->
-                        if (pressed) triggerHaptic()
-                        onButtonChange(btn, pressed)
-                    }
-                )
+            Box(
+                modifier = Modifier
+                    .offset(x = dpadOffsetX.dp, y = dpadOffsetY.dp)
+                    .scale(dpadScale)
+                    .then(
+                        if (isEditingLayout) {
+                            Modifier
+                                .border(
+                                    width = if (selectedCluster == EditableCluster.DPAD) 2.dp else 1.dp,
+                                    color = if (selectedCluster == EditableCluster.DPAD) Color(0xFF00E5FF) else Color(0xFF8E95A5).copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .background(
+                                    color = if (selectedCluster == EditableCluster.DPAD) Color(0xFF00E5FF).copy(alpha = 0.08f) else Color.Transparent,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .pointerInput(Unit) {
+                                    detectDragGestures(
+                                        onDragStart = { selectedCluster = EditableCluster.DPAD },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            val dx = dragAmount.x / density
+                                            val dy = dragAmount.y / density
+                                            onDpadDrag?.invoke(dx, dy)
+                                        }
+                                    )
+                                }
+                        } else Modifier
+                    )
+            ) {
+                if (classicDmgTheme) {
+                    ClassicDmgDPad(
+                        onButtonChange = { btn, pressed ->
+                            if (!isEditingLayout) {
+                                if (pressed) triggerHaptic()
+                                onButtonChange(btn, pressed)
+                            }
+                        }
+                    )
+                } else {
+                    ModernDPad(
+                        onButtonChange = { btn, pressed ->
+                            if (!isEditingLayout) {
+                                if (pressed) triggerHaptic()
+                                onButtonChange(btn, pressed)
+                            }
+                        }
+                    )
+                }
+            }
 
-                ClassicDmgActionButtons(
-                    onButtonChange = { btn, pressed ->
-                        if (pressed) triggerHaptic()
-                        onButtonChange(btn, pressed)
-                    }
-                )
-            } else {
-                ModernDPad(
-                    onButtonChange = { btn, pressed ->
-                        if (pressed) triggerHaptic()
-                        onButtonChange(btn, pressed)
-                    }
-                )
-
-                ActionButtonsGroup(
-                    onButtonChange = { btn, pressed ->
-                        if (pressed) triggerHaptic()
-                        onButtonChange(btn, pressed)
-                    }
-                )
+            Box(
+                modifier = Modifier
+                    .offset(x = actionOffsetX.dp, y = actionOffsetY.dp)
+                    .scale(actionScale)
+                    .then(
+                        if (isEditingLayout) {
+                            Modifier
+                                .border(
+                                    width = if (selectedCluster == EditableCluster.ACTIONS) 2.dp else 1.dp,
+                                    color = if (selectedCluster == EditableCluster.ACTIONS) Color(0xFF00E5FF) else Color(0xFF8E95A5).copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .background(
+                                    color = if (selectedCluster == EditableCluster.ACTIONS) Color(0xFF00E5FF).copy(alpha = 0.08f) else Color.Transparent,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .pointerInput(Unit) {
+                                    detectDragGestures(
+                                        onDragStart = { selectedCluster = EditableCluster.ACTIONS },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            val dx = dragAmount.x / density
+                                            val dy = dragAmount.y / density
+                                            onActionDrag?.invoke(dx, dy)
+                                        }
+                                    )
+                                }
+                        } else Modifier
+                    )
+            ) {
+                if (classicDmgTheme) {
+                    ClassicDmgActionButtons(
+                        onButtonChange = { btn, pressed ->
+                            if (!isEditingLayout) {
+                                if (pressed) triggerHaptic()
+                                onButtonChange(btn, pressed)
+                            }
+                        }
+                    )
+                } else {
+                    ActionButtonsGroup(
+                        onButtonChange = { btn, pressed ->
+                            if (!isEditingLayout) {
+                                if (pressed) triggerHaptic()
+                                onButtonChange(btn, pressed)
+                            }
+                        }
+                    )
+                }
             }
         }
 
@@ -176,45 +435,83 @@ fun TouchController(
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
         ) {
-            Row(
+            Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                    .offset(x = selectStartOffsetX.dp, y = selectStartOffsetY.dp)
+                    .scale(selectStartScale)
+                    .then(
+                        if (isEditingLayout) {
+                            Modifier
+                                .border(
+                                    width = if (selectedCluster == EditableCluster.SELECT_START) 2.dp else 1.dp,
+                                    color = if (selectedCluster == EditableCluster.SELECT_START) Color(0xFF00E5FF) else Color(0xFF8E95A5).copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .background(
+                                    color = if (selectedCluster == EditableCluster.SELECT_START) Color(0xFF00E5FF).copy(alpha = 0.08f) else Color.Transparent,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .pointerInput(Unit) {
+                                    detectDragGestures(
+                                        onDragStart = { selectedCluster = EditableCluster.SELECT_START },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            val dx = dragAmount.x / density
+                                            val dy = dragAmount.y / density
+                                            onSelectStartDrag?.invoke(dx, dy)
+                                        }
+                                    )
+                                }
+                        } else Modifier
+                    )
             ) {
-                if (classicDmgTheme) {
-                    ClassicDmgSelectStartButton(
-                        label = "SELECT",
-                        onPressChange = { pressed ->
-                            if (pressed) triggerHaptic()
-                            onButtonChange(JoypadButton.SELECT, pressed)
-                        }
-                    )
-                    Spacer(modifier = Modifier.width(36.dp))
-                    ClassicDmgSelectStartButton(
-                        label = "START",
-                        onPressChange = { pressed ->
-                            if (pressed) triggerHaptic()
-                            onButtonChange(JoypadButton.START, pressed)
-                        }
-                    )
-                } else {
-                    PillButton(
-                        text = "SELECT",
-                        onPressChange = { pressed ->
-                            if (pressed) triggerHaptic()
-                            onButtonChange(JoypadButton.SELECT, pressed)
-                        }
-                    )
-                    Spacer(modifier = Modifier.width(32.dp))
-                    PillButton(
-                        text = "START",
-                        onPressChange = { pressed ->
-                            if (pressed) triggerHaptic()
-                            onButtonChange(JoypadButton.START, pressed)
-                        }
-                    )
+                Row(
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (classicDmgTheme) {
+                        ClassicDmgSelectStartButton(
+                            label = "SELECT",
+                            onPressChange = { pressed ->
+                                if (!isEditingLayout) {
+                                    if (pressed) triggerHaptic()
+                                    onButtonChange(JoypadButton.SELECT, pressed)
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(36.dp))
+                        ClassicDmgSelectStartButton(
+                            label = "START",
+                            onPressChange = { pressed ->
+                                if (!isEditingLayout) {
+                                    if (pressed) triggerHaptic()
+                                    onButtonChange(JoypadButton.START, pressed)
+                                }
+                            }
+                        )
+                    } else {
+                        PillButton(
+                            text = "SELECT",
+                            onPressChange = { pressed ->
+                                if (!isEditingLayout) {
+                                    if (pressed) triggerHaptic()
+                                    onButtonChange(JoypadButton.SELECT, pressed)
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(32.dp))
+                        PillButton(
+                            text = "START",
+                            onPressChange = { pressed ->
+                                if (!isEditingLayout) {
+                                    if (pressed) triggerHaptic()
+                                    onButtonChange(JoypadButton.START, pressed)
+                                }
+                            }
+                        )
+                    }
                 }
             }
 

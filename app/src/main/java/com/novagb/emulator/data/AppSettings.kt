@@ -97,4 +97,54 @@ class AppSettings(context: Context) {
     var autoSaveOnExit: Boolean
         get() = prefs.getBoolean("auto_save_exit", true)
         set(value) = prefs.edit().putBoolean("auto_save_exit", value).apply()
+
+    var dpadOffsetX: Float
+        get() = prefs.getFloat("ctrl_dpad_offset_x", 0f)
+        set(value) = prefs.edit().putFloat("ctrl_dpad_offset_x", value).apply()
+
+    var dpadOffsetY: Float
+        get() = prefs.getFloat("ctrl_dpad_offset_y", 0f)
+        set(value) = prefs.edit().putFloat("ctrl_dpad_offset_y", value).apply()
+
+    var dpadScale: Float
+        get() = prefs.getFloat("ctrl_dpad_scale", 1.0f)
+        set(value) = prefs.edit().putFloat("ctrl_dpad_scale", value).apply()
+
+    var actionOffsetX: Float
+        get() = prefs.getFloat("ctrl_action_offset_x", 0f)
+        set(value) = prefs.edit().putFloat("ctrl_action_offset_x", value).apply()
+
+    var actionOffsetY: Float
+        get() = prefs.getFloat("ctrl_action_offset_y", 0f)
+        set(value) = prefs.edit().putFloat("ctrl_action_offset_y", value).apply()
+
+    var actionScale: Float
+        get() = prefs.getFloat("ctrl_action_scale", 1.0f)
+        set(value) = prefs.edit().putFloat("ctrl_action_scale", value).apply()
+
+    var selectStartOffsetX: Float
+        get() = prefs.getFloat("ctrl_select_start_offset_x", 0f)
+        set(value) = prefs.edit().putFloat("ctrl_select_start_offset_x", value).apply()
+
+    var selectStartOffsetY: Float
+        get() = prefs.getFloat("ctrl_select_start_offset_y", 0f)
+        set(value) = prefs.edit().putFloat("ctrl_select_start_offset_y", value).apply()
+
+    var selectStartScale: Float
+        get() = prefs.getFloat("ctrl_select_start_scale", 1.0f)
+        set(value) = prefs.edit().putFloat("ctrl_select_start_scale", value).apply()
+
+    fun resetControllerLayout() {
+        prefs.edit()
+            .putFloat("ctrl_dpad_offset_x", 0f)
+            .putFloat("ctrl_dpad_offset_y", 0f)
+            .putFloat("ctrl_dpad_scale", 1.0f)
+            .putFloat("ctrl_action_offset_x", 0f)
+            .putFloat("ctrl_action_offset_y", 0f)
+            .putFloat("ctrl_action_scale", 1.0f)
+            .putFloat("ctrl_select_start_offset_x", 0f)
+            .putFloat("ctrl_select_start_offset_y", 0f)
+            .putFloat("ctrl_select_start_scale", 1.0f)
+            .apply()
+    }
 }

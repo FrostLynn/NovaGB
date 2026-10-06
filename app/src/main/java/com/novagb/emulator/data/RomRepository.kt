@@ -1,12 +1,15 @@
 package com.novagb.emulator.data
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.novagb.emulator.core.Cartridge
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import java.net.URLEncoder
 import java.util.UUID
 
@@ -168,5 +171,23 @@ class RomRepository(private val context: Context) {
         val safeName = romTitle.replace(Regex("[^a-zA-Z0-9_-]"), "_")
         val file = File(stateDir, "${safeName}_slot$slotIndex.state")
         return if (file.exists()) file.lastModified() else 0L
+    }
+
+    fun saveStateThumbnail(romTitle: String, slotIndex: Int, framebuffer: IntArray) {
+        try {
+            val safeName = romTitle.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+            val file = File(stateDir, "${safeName}_slot$slotIndex.png")
+            val bitmap = Bitmap.createBitmap(160, 144, Bitmap.Config.ARGB_8888)
+            bitmap.setPixels(framebuffer, 0, 160, 0, 0, 160, 144)
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun loadStateThumbnail(romTitle: String, slotIndex: Int): Bitmap? {
+        val safeName = romTitle.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+        val file = File(stateDir, "${safeName}_slot$slotIndex.png")
+        return if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null
     }
 }
