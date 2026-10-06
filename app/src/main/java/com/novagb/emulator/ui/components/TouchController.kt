@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -50,6 +51,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novagb.emulator.core.JoypadButton
+import com.novagb.emulator.ui.theme.AccentPrimary
+import com.novagb.emulator.ui.theme.AccentSecondary
+import com.novagb.emulator.ui.theme.ControllerButtonBg
+import com.novagb.emulator.ui.theme.ControllerPillBg
+import com.novagb.emulator.ui.theme.ControllerPillBorder
+import com.novagb.emulator.ui.theme.DarkBackground
+import com.novagb.emulator.ui.theme.DarkBorder
+import com.novagb.emulator.ui.theme.DarkSurfaceSubtle
+import com.novagb.emulator.ui.theme.DmgCrossBorder
+import com.novagb.emulator.ui.theme.DmgCrossButton
+import com.novagb.emulator.ui.theme.DmgMagentaButton
+import com.novagb.emulator.ui.theme.DmgMagentaButtonPress
+import com.novagb.emulator.ui.theme.DmgSelectStartPill
+import com.novagb.emulator.ui.theme.DmgSelectStartPress
+import com.novagb.emulator.ui.theme.DmgSpeakerGrille
+import com.novagb.emulator.ui.theme.DmgTextBlue
+import com.novagb.emulator.ui.theme.TextMuted
+import com.novagb.emulator.ui.theme.TextPrimary
+import com.novagb.emulator.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.atan2
@@ -492,8 +512,8 @@ fun TouchController(
                             }
                         )
                     } else {
-                        PillButton(
-                            text = "SELECT",
+                        ModernSelectStartButton(
+                            label = "SELECT",
                             onPressChange = { pressed ->
                                 if (!isEditingLayout) {
                                     if (pressed) triggerHaptic()
@@ -501,9 +521,9 @@ fun TouchController(
                                 }
                             }
                         )
-                        Spacer(modifier = Modifier.width(32.dp))
-                        PillButton(
-                            text = "START",
+                        Spacer(modifier = Modifier.width(28.dp))
+                        ModernSelectStartButton(
+                            label = "START",
                             onPressChange = { pressed ->
                                 if (!isEditingLayout) {
                                     if (pressed) triggerHaptic()
@@ -534,8 +554,8 @@ private fun ClassicDmgUtilityButton(
 ) {
     Surface(
         shape = RoundedCornerShape(6.dp),
-        color = if (active) Color(0xFF0F205A) else Color(0xFF565860),
-        border = androidx.compose.foundation.BorderStroke(1.dp, if (active) Color(0xFF0F205A) else Color(0xFF3E4048)),
+        color = if (active) DmgTextBlue else Color(0xFF565860),
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (active) DmgTextBlue else Color(0xFF3E4048)),
         modifier = Modifier.clickable { onClick() }
     ) {
         Text(
@@ -602,15 +622,14 @@ private fun ClassicDmgDPad(
         val isLeft = JoypadButton.LEFT in activeDirections
         val isRight = JoypadButton.RIGHT in activeDirections
 
-        // Authentic Game Boy Black Cross Shape
         Box(
             modifier = Modifier
                 .width(136.dp)
                 .height(44.dp)
                 .shadow(4.dp, RoundedCornerShape(4.dp))
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color(0xFF18191E))
-                .border(1.dp, Color(0xFF2E313A), RoundedCornerShape(4.dp))
+                .background(DmgCrossButton)
+                .border(1.dp, DmgCrossBorder, RoundedCornerShape(4.dp))
         )
 
         Box(
@@ -619,31 +638,31 @@ private fun ClassicDmgDPad(
                 .height(136.dp)
                 .shadow(4.dp, RoundedCornerShape(4.dp))
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color(0xFF18191E))
-                .border(1.dp, Color(0xFF2E313A), RoundedCornerShape(4.dp))
+                .background(DmgCrossButton)
+                .border(1.dp, DmgCrossBorder, RoundedCornerShape(4.dp))
         )
 
         Text(
             text = "▲",
-            color = if (isUp) Color(0xFF00E5FF) else Color(0xFF3E414B),
+            color = if (isUp) AccentPrimary else Color(0xFF3E414B),
             fontSize = 14.sp,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp)
         )
         Text(
             text = "▼",
-            color = if (isDown) Color(0xFF00E5FF) else Color(0xFF3E414B),
+            color = if (isDown) AccentPrimary else Color(0xFF3E414B),
             fontSize = 14.sp,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)
         )
         Text(
             text = "◀",
-            color = if (isLeft) Color(0xFF00E5FF) else Color(0xFF3E414B),
+            color = if (isLeft) AccentPrimary else Color(0xFF3E414B),
             fontSize = 14.sp,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp)
         )
         Text(
             text = "▶",
-            color = if (isRight) Color(0xFF00E5FF) else Color(0xFF3E414B),
+            color = if (isRight) AccentPrimary else Color(0xFF3E414B),
             fontSize = 14.sp,
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
         )
@@ -652,7 +671,7 @@ private fun ClassicDmgDPad(
             modifier = Modifier
                 .size(42.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF101114))
+                .background(DarkBackground)
                 .border(1.5.dp, Color(0xFF282A33), CircleShape)
         )
     }
@@ -709,7 +728,7 @@ private fun ClassicDmgActionButtons(
             ) {
                 DmgRoundButton(
                     label = "",
-                    color = Color(0xFF9E1644),
+                    color = DmgMagentaButton,
                     onPressChange = { onButtonChange(JoypadButton.B, it) }
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -718,7 +737,7 @@ private fun ClassicDmgActionButtons(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontStyle = FontStyle.Italic,
-                    color = Color(0xFF0F205A),
+                    color = DmgTextBlue,
                     modifier = Modifier.offset(x = 8.dp)
                 )
             }
@@ -731,7 +750,7 @@ private fun ClassicDmgActionButtons(
             ) {
                 DmgRoundButton(
                     label = "",
-                    color = Color(0xFF9E1644),
+                    color = DmgMagentaButton,
                     onPressChange = { onButtonChange(JoypadButton.A, it) }
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -740,7 +759,7 @@ private fun ClassicDmgActionButtons(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.ExtraBold,
                     fontStyle = FontStyle.Italic,
-                    color = Color(0xFF0F205A),
+                    color = DmgTextBlue,
                     modifier = Modifier.offset(x = 8.dp)
                 )
             }
@@ -765,9 +784,9 @@ private fun DmgRoundButton(
             .background(
                 Brush.verticalGradient(
                     colors = if (isPressed) {
-                        listOf(Color(0xFF720B2E), Color(0xFF5A0824))
+                        listOf(DmgMagentaButtonPress, Color(0xFF5A0824))
                     } else {
-                        listOf(Color(0xFFB51D51), Color(0xFF8A1039))
+                        listOf(Color(0xFFB51D51), color)
                     }
                 )
             )
@@ -813,8 +832,8 @@ private fun ClassicDmgSelectStartButton(
                 .graphicsLayer(rotationZ = -26f)
                 .clip(RoundedCornerShape(8.dp))
                 .background(
-                    if (isPressed) Color(0xFF383A42)
-                    else Color(0xFF5A5C64)
+                    if (isPressed) DmgSelectStartPress
+                    else DmgSelectStartPill
                 )
                 .border(
                     1.dp,
@@ -841,8 +860,56 @@ private fun ClassicDmgSelectStartButton(
             fontSize = 11.sp,
             fontWeight = FontWeight.ExtraBold,
             fontStyle = FontStyle.Italic,
-            color = Color(0xFF0F205A),
+            color = DmgTextBlue,
             letterSpacing = 0.5.sp
+        )
+    }
+}
+
+@Composable
+private fun ModernSelectStartButton(
+    label: String,
+    onPressChange: (Boolean) -> Unit
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(64.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(48.dp)
+                .height(16.dp)
+                .graphicsLayer(rotationZ = -25f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (isPressed) AccentPrimary else ControllerPillBg)
+                .border(
+                    1.dp,
+                    if (isPressed) AccentPrimary else ControllerPillBorder,
+                    RoundedCornerShape(8.dp)
+                )
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            onPressChange(true)
+                            tryAwaitRelease()
+                            isPressed = false
+                            onPressChange(false)
+                        }
+                    )
+                }
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isPressed) AccentPrimary else TextSecondary,
+            letterSpacing = 1.sp
         )
     }
 }
@@ -862,7 +929,7 @@ fun ClassicDmgSpeakerGrille(modifier: Modifier = Modifier) {
                     .height(h)
                     .graphicsLayer(rotationZ = -28f)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFF282B33))
+                    .background(DmgSpeakerGrille)
             )
         }
     }
@@ -884,7 +951,7 @@ private fun ModernDPad(
                     colors = listOf(Color(0xFF282B34), Color(0xFF16181F))
                 )
             )
-            .border(2.dp, Color(0xFF3B404E), CircleShape)
+            .border(2.dp, DarkBorder, CircleShape)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -928,28 +995,28 @@ private fun ModernDPad(
 
         Text(
             text = "▲",
-            color = if (isUp) Color(0xFF00E5FF) else Color(0xFF8E95A5),
+            color = if (isUp) AccentPrimary else TextMuted,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp)
         )
         Text(
             text = "▼",
-            color = if (isDown) Color(0xFF00E5FF) else Color(0xFF8E95A5),
+            color = if (isDown) AccentPrimary else TextMuted,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp)
         )
         Text(
             text = "◀",
-            color = if (isLeft) Color(0xFF00E5FF) else Color(0xFF8E95A5),
+            color = if (isLeft) AccentPrimary else TextMuted,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 10.dp)
         )
         Text(
             text = "▶",
-            color = if (isRight) Color(0xFF00E5FF) else Color(0xFF8E95A5),
+            color = if (isRight) AccentPrimary else TextMuted,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 10.dp)
@@ -1004,13 +1071,13 @@ private fun ActionButtonsGroup(
         ) {
             TurboActionButton(
                 label = "TB",
-                color = Color(0xFFFF2A6D),
+                color = AccentSecondary,
                 button = JoypadButton.B,
                 onButtonPulse = onButtonChange
             )
             TurboActionButton(
                 label = "TA",
-                color = Color(0xFF00E5FF),
+                color = AccentPrimary,
                 button = JoypadButton.A,
                 onButtonPulse = onButtonChange
             )
@@ -1026,7 +1093,7 @@ private fun ActionButtonsGroup(
         ) {
             CircularActionButton(
                 label = "B",
-                color = Color(0xFFFF2A6D),
+                color = AccentSecondary,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .offset(x = 4.dp, y = 4.dp),
@@ -1035,7 +1102,7 @@ private fun ActionButtonsGroup(
 
             CircularActionButton(
                 label = "A",
-                color = Color(0xFF00E5FF),
+                color = AccentPrimary,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .offset(x = (-4).dp, y = (-8).dp),
@@ -1057,15 +1124,19 @@ private fun CircularActionButton(
     Box(
         modifier = modifier
             .size(56.dp)
+            .graphicsLayer {
+                scaleX = if (isPressed) 0.94f else 1.0f
+                scaleY = if (isPressed) 0.94f else 1.0f
+            }
             .shadow(if (isPressed) 3.dp else 8.dp, CircleShape)
             .clip(CircleShape)
             .background(
                 if (isPressed) color.copy(alpha = 0.9f)
-                else Color(0xFF22252E)
+                else ControllerButtonBg
             )
             .border(
                 2.dp,
-                if (isPressed) color else color.copy(alpha = 0.6f),
+                if (isPressed) color else color.copy(alpha = 0.65f),
                 CircleShape
             )
             .pointerInput(Unit) {
@@ -1104,15 +1175,15 @@ private fun TurboActionButton(
         if (!isHolding) return@LaunchedEffect
         while (isActive) {
             onButtonPulse(button, true)
-            delay(50) // 50ms ON
+            delay(50)
             onButtonPulse(button, false)
-            delay(50) // 50ms OFF
+            delay(50)
         }
     }
 
     val displayTextColor = if (isHolding) {
         Color.Black
-    } else if (color == Color(0xFFFF2A6D)) {
+    } else if (color == AccentSecondary) {
         Color(0xFFFF5C8A)
     } else {
         color
@@ -1121,11 +1192,15 @@ private fun TurboActionButton(
     Box(
         modifier = modifier
             .size(48.dp)
+            .graphicsLayer {
+                scaleX = if (isHolding) 0.94f else 1.0f
+                scaleY = if (isHolding) 0.94f else 1.0f
+            }
             .shadow(if (isHolding) 2.dp else 6.dp, CircleShape)
             .clip(CircleShape)
             .background(
                 if (isHolding) color.copy(alpha = 0.85f)
-                else Color(0xFF1E2129)
+                else DarkSurfaceSubtle
             )
             .border(
                 1.5.dp,
@@ -1165,9 +1240,10 @@ private fun PillButton(
 
     Box(
         modifier = Modifier
+            .heightIn(min = 40.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(if (isHighlighted) Color(0xFF00E5FF) else Color(0xFF242731))
-            .border(1.dp, if (isHighlighted) Color(0xFF00E5FF) else Color(0xFF3B404E), RoundedCornerShape(20.dp))
+            .background(if (isHighlighted) AccentPrimary else ControllerPillBg)
+            .border(1.dp, if (isHighlighted) AccentPrimary else ControllerPillBorder, RoundedCornerShape(20.dp))
             .pointerInput(onClick, onPressChange) {
                 if (onPressChange != null) {
                     detectTapGestures(
@@ -1183,11 +1259,12 @@ private fun PillButton(
                     detectTapGestures(onTap = { onClick() })
                 }
             }
-            .padding(horizontal = 18.dp, vertical = 8.dp)
+            .padding(horizontal = 18.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            color = if (isHighlighted) Color.Black else Color(0xFFD0D5E0),
+            color = if (isHighlighted) Color.Black else TextPrimary,
             fontWeight = FontWeight.Bold,
             fontSize = 11.sp,
             letterSpacing = 1.sp

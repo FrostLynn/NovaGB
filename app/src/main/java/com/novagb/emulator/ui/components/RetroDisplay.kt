@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,6 +39,19 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novagb.emulator.data.AspectRatioMode
+import com.novagb.emulator.ui.theme.DarkBorder
+import com.novagb.emulator.ui.theme.DarkSurfaceSubtle
+import com.novagb.emulator.ui.theme.DmgBezelDark
+import com.novagb.emulator.ui.theme.DmgShellBezel
+import com.novagb.emulator.ui.theme.DmgShellBorder
+import com.novagb.emulator.ui.theme.DmgStripeIndigo
+import com.novagb.emulator.ui.theme.DmgStripeMagenta
+import com.novagb.emulator.ui.theme.DmgTextBlue
+import com.novagb.emulator.ui.theme.LedRedActive
+import com.novagb.emulator.ui.theme.LedRedGlow
+import com.novagb.emulator.ui.theme.TextMuted
+import com.novagb.emulator.ui.theme.TextPrimary
+import com.novagb.emulator.ui.theme.TextSecondary
 
 /**
  * Modern retro viewport component with custom LCD grid, CRT scanlines, and authentic console bezel with power LED.
@@ -79,8 +91,8 @@ fun RetroDisplay(
 
     val outerShape = RoundedCornerShape(16.dp)
 
-    val bezelBgColor = if (classicDmgShell) Color(0xFF525660) else if (showRetroBezel) Color(0xFF262933) else Color(0xFF14161B)
-    val bezelBorderColor = if (classicDmgShell) Color(0xFF3C3E46) else if (showRetroBezel) Color(0xFF383D4C) else Color(0xFF262A36)
+    val bezelBgColor = if (classicDmgShell) DmgShellBezel else if (showRetroBezel) DmgBezelDark else DarkSurfaceSubtle
+    val bezelBorderColor = if (classicDmgShell) DmgShellBorder else if (showRetroBezel) DarkBorder else DarkSurfaceSubtle
 
     Box(
         modifier = modifier
@@ -113,14 +125,14 @@ fun RetroDisplay(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(2.dp)
-                                .background(Color(0xFF882040))
+                                .background(DmgStripeMagenta)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(2.dp)
-                                .background(Color(0xFF202060))
+                                .background(DmgStripeIndigo)
                         )
                     }
 
@@ -131,7 +143,7 @@ fun RetroDisplay(
                         fontSize = 8.sp,
                         fontWeight = FontWeight.Bold,
                         fontStyle = FontStyle.Italic,
-                        color = Color(0xFF8E95A5),
+                        color = TextMuted,
                         letterSpacing = 0.5.sp
                     )
 
@@ -142,14 +154,14 @@ fun RetroDisplay(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(2.dp)
-                                .background(Color(0xFF882040))
+                                .background(DmgStripeMagenta)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(2.dp)
-                                .background(Color(0xFF202060))
+                                .background(DmgStripeIndigo)
                         )
                     }
                 }
@@ -168,21 +180,23 @@ fun RetroDisplay(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
-                                .shadow(8.dp, CircleShape)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.radialGradient(
-                                        colors = listOf(Color(0xFFFF3333), Color(0xFF990000))
-                                    )
-                                )
-                        )
+                                .size(10.dp)
+                                .background(Brush.radialGradient(listOf(LedRedGlow, Color.Transparent)), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.radialGradient(listOf(LedRedActive, Color(0xFF990000))))
+                            )
+                        }
                         Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = "BATTERY",
                             fontSize = 7.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFA0A6B8)
+                            color = TextSecondary
                         )
                     }
                 }
@@ -287,7 +301,7 @@ fun RetroDisplay(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
                         fontStyle = FontStyle.Italic,
-                        color = if (classicDmgShell) Color(0xFF102055) else Color(0xFFD0D5E0),
+                        color = if (classicDmgShell) DmgTextBlue else TextPrimary,
                         letterSpacing = 0.5.sp
                     )
                     Text(
@@ -295,7 +309,7 @@ fun RetroDisplay(
                         fontSize = 8.sp,
                         fontWeight = FontWeight.Bold,
                         fontStyle = FontStyle.Italic,
-                        color = if (classicDmgShell) Color(0xFF102055) else Color(0xFFD0D5E0)
+                        color = if (classicDmgShell) DmgTextBlue else TextPrimary
                     )
                 }
             }
